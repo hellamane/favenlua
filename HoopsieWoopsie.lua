@@ -30,57 +30,56 @@ local serv = win:Server("King", "")
 local aimstix = serv:Channel("Assistment")
 
 aimstix:Button("Green Shot", function()
-local rimCFrames = {
-    CFrame.new(-51.5, 10, 0),
-    CFrame.new(51.5, 10, 0)
-}
-local function simulateKeyPress(key, holdTime)
-    VirtualInputManager:SendKeyEvent(true, key, false, game)
+    local rimCFrames = {
+        CFrame.new(-51.5, 10, 0),
+        CFrame.new(51.5, 10, 0)
+    }
 
-    wait(holdTime)
-    VirtualInputManager:SendKeyEvent(false, key, false, game)
-end
+    local function simulateKeyPress(key, holdTime)
+        VirtualInputManager:SendKeyEvent(true, key, false, game)
+        wait(holdTime)
+        VirtualInputManager:SendKeyEvent(false, key, false, game)
+    end
 
-local function shootBall()
-    local ball = workspace:FindFirstChild("Basketball")
-    local player = game.Players.LocalPlayer
-    local character = player.Character or player.CharacterAdded:Wait()
-    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+    local function shootBall()
+        local ball = workspace:FindFirstChild("Basketball")
+        local player = game.Players.LocalPlayer
+        local character = player.Character or player.CharacterAdded:Wait()
+        local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
 
-    if ball and humanoidRootPart then
-        local closestRim = nil
-        local minDistance = math.huge
-        for _, rimCFrame in pairs(rimCFrames) do
-            local distance = (humanoidRootPart.Position - rimCFrame.Position).magnitude
-            if distance < minDistance then
-                minDistance = distance
-                closestRim = rimCFrame
+        if ball and humanoidRootPart then
+            local closestRim = nil
+            local minDistance = math.huge
+            for _, rimCFrame in pairs(rimCFrames) do
+                local distance = (humanoidRootPart.Position - rimCFrame.Position).magnitude
+                if distance < minDistance then
+                    minDistance = distance
+                    closestRim = rimCFrame
+                end
+            end
+
+            -- Calculate the direction and velocity for the ball to reach the closest rim
+            if closestRim then
+                local direction = (closestRim.Position - ball.Position).unit
+                ball.Velocity = direction * 100
             end
         end
+    end
 
-        -- Calculate the direction and velocity for the ball to reach the closest rim
-        if closestRim then
-            local direction = (closestRim.Position - ball.Position).unit
-            ball.Velocity = direction * 100
+    local function onKeyPress(inputObject, gameProcessedEvent)
+        if inputObject.KeyCode == Enum.KeyCode.T then
+            simulateKeyPress(Enum.KeyCode.R, 0.5)
+            shootBall()
         end
     end
-end
 
-local function onKeyPress(inputObject, gameProcessedEvent)
-    if inputObject.KeyCode == Enum.KeyCode.T then
-        simulateKeyPress(Enum.KeyCode.R, 0.523.5)
-        shootBall()
-    end
-end
-
-UserInputService.InputBegan:Connect(onKeyPress)
+    UserInputService.InputBegan:Connect(onKeyPress)
 end)
 
-aimstix:Label("Aimbot is FPS and physics based, still shots/ side shots recommended")
+aimstix:Label("Aimbot is FPS and physics based, still shots/side shots recommended")
 aimstix:Seperator()
 
 aimstix:Button("Power Dunk", function()
-    local strength = 100
     local Plr = Players.LocalPlayer
     if Plr.Character then
         local descs = Plr.Character:GetDescendants()
@@ -507,9 +506,7 @@ Players.PlayerAdded:Connect(checkPlayer)
 
 for _, player in pairs(Players:GetPlayers()) do
     checkPlayer(player)
-	end
-
-
+end
 
 doInfstamina()
 doInbound()
