@@ -79,7 +79,7 @@ end
 UserInputService.InputBegan:Connect(onKeyPress)
 end)
 
-aimstix:Label("Aimbot is FPS and physics based, still shots/ side shots recommended")
+aimstix:Label("Aimbot is FPS and physics based, press G to shoot.")
 aimstix:Seperator()
 
 aimstix:Button("Power Dunk", function()
