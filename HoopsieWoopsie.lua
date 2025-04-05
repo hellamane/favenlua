@@ -67,8 +67,8 @@ aimstix:Button("Green Shot", function()
     end
 
     local function onKeyPress(inputObject, gameProcessedEvent)
-        if inputObject.KeyCode == Enum.KeyCode.T then
-            simulateKeyPress(Enum.KeyCode.R, 0.5)
+        if inputObject.KeyCode == Enum.KeyCode.G then
+            simulateKeyPress(Enum.KeyCode.R, 0.52)
             shootBall()
         end
     end
@@ -76,7 +76,7 @@ aimstix:Button("Green Shot", function()
     UserInputService.InputBegan:Connect(onKeyPress)
 end)
 
-aimstix:Label("Aimbot is FPS and physics based, still shots/side shots recommended")
+aimstix:Label("Shoot with G")
 aimstix:Seperator()
 
 aimstix:Button("Power Dunk", function()
