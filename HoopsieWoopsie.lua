@@ -7,6 +7,12 @@ getgenv().Reach = false
 getgenv().AntiFling = true
 getgenv().BlockShots = false
 
+local rimCFrames = {
+    CFrame.new(-51.5, 10, 0),
+    CFrame.new(51.5, 10, 0)
+}
+
+local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -30,56 +36,54 @@ local serv = win:Server("King", "")
 local aimstix = serv:Channel("Assistment")
 
 aimstix:Button("Green Shot", function()
-    local rimCFrames = {
-        CFrame.new(-51.5, 10, 0),
-        CFrame.new(51.5, 10, 0)
-    }
 
-    local function simulateKeyPress(key, holdTime)
-        VirtualInputManager:SendKeyEvent(true, key, false, game)
-        wait(holdTime)
-        VirtualInputManager:SendKeyEvent(false, key, false, game)
-    end
 
-    local function shootBall()
-        local ball = workspace:FindFirstChild("Basketball")
-        local player = game.Players.LocalPlayer
-        local character = player.Character or player.CharacterAdded:Wait()
-        local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+local function simulateKeyPress(key, holdTime)
+    VirtualInputManager:SendKeyEvent(true, key, false, game)
 
-        if ball and humanoidRootPart then
-            local closestRim = nil
-            local minDistance = math.huge
-            for _, rimCFrame in pairs(rimCFrames) do
-                local distance = (humanoidRootPart.Position - rimCFrame.Position).magnitude
-                if distance < minDistance then
-                    minDistance = distance
-                    closestRim = rimCFrame
-                end
-            end
+    wait(holdTime)
+    VirtualInputManager:SendKeyEvent(false, key, false, game)
+end
 
-            -- Calculate the direction and velocity for the ball to reach the closest rim
-            if closestRim then
-                local direction = (closestRim.Position - ball.Position).unit
-                ball.Velocity = direction * 100
+local function shootBall()
+    local ball = workspace:FindFirstChild("Basketball")
+    local player = game.Players.LocalPlayer
+    local character = player.Character or player.CharacterAdded:Wait()
+    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+
+    if ball and humanoidRootPart then
+        local closestRim = nil
+        local minDistance = math.huge
+        for _, rimCFrame in pairs(rimCFrames) do
+            local distance = (humanoidRootPart.Position - rimCFrame.Position).magnitude
+            if distance < minDistance then
+                minDistance = distance
+                closestRim = rimCFrame
             end
         end
-    end
 
-    local function onKeyPress(inputObject, gameProcessedEvent)
-        if inputObject.KeyCode == Enum.KeyCode.G then
-            simulateKeyPress(Enum.KeyCode.R, 0.52)
-            shootBall()
+        if closestRim then
+            local direction = (closestRim.Position - ball.Position).unit
+            ball.Velocity = direction * 100
         end
     end
+end
 
-    UserInputService.InputBegan:Connect(onKeyPress)
+local function onKeyPress(inputObject, gameProcessedEvent)
+    if inputObject.KeyCode == Enum.KeyCode.G then
+        simulateKeyPress(Enum.KeyCode.R, 0.52)
+        shootBall()
+    end
+end
+
+UserInputService.InputBegan:Connect(onKeyPress)
 end)
 
-aimstix:Label("Shoot with G")
+aimstix:Label("Aimbot is FPS and physics based, still shots/ side shots recommended")
 aimstix:Seperator()
 
 aimstix:Button("Power Dunk", function()
+    local strength = 100
     local Plr = Players.LocalPlayer
     if Plr.Character then
         local descs = Plr.Character:GetDescendants()
@@ -270,38 +274,55 @@ function doFollow()
             wait(0.040)
             local player = Players.LocalPlayer
             local character = player.Character or player.CharacterAdded:Wait()
-            local humanoid = character:FindFirstChildOfClass("Humanoid")
             local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
             local basketball = workspace:FindFirstChild("Basketball")
 
-            if basketball and humanoid and humanoidRootPart then
+            if basketball and humanoidRootPart then
                 local closestPlayer = nil
                 local closestDistance = math.huge
-                
+
                 for _, otherPlayer in pairs(Players:GetPlayers()) do
                     if otherPlayer.Team ~= player.Team and otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                        local distance = (otherPlayer.Character.HumanoidRootPart.Position - player.Character.HumanoidRootPart.Position).magnitude
+                        local distance = (otherPlayer.Character.HumanoidRootPart.Position - humanoidRootPart.Position).magnitude
                         if distance < closestDistance and basketball:IsDescendantOf(otherPlayer.Character) then
                             closestDistance = distance
                             closestPlayer = otherPlayer
                         end
                     end
                 end
-                
+
                 if closestPlayer then
                     local targetPosition = closestPlayer.Character.HumanoidRootPart.Position + closestPlayer.Character.HumanoidRootPart.CFrame.LookVector * -0.3048 -- 1 foot in front of them
-                    humanoid:MoveTo(targetPosition)
-                    humanoid.WalkSpeed = closestPlayer.Character.Humanoid.WalkSpeed
+                    local direction = (targetPosition - humanoidRootPart.Position).unit
+
+                    -- Determine the key to press based on the direction
+                    if direction.Z > 0 then
+                        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.W, false, game)
+                    elseif direction.Z < 0 then
+                        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.S, false, game)
+                    else
+                        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.W, false, game)
+                        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.S, false, game)
+                    end
+
+                    if direction.X > 0 then
+                        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.D, false, game)
+                    elseif direction.X < 0 then
+                        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.A, false, game)
+                    else
+                        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.D, false, game)
+                        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.A, false, game)
+                    end
+                else
+                    VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.W, false, game)
+                    VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.A, false, game)
+                    VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.S, false, game)
+                    VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.D, false, game)
                 end
             end
         end
     end)
 end
-
-local rimCFrames = {
-    CFrame.new(-51.5, 10, 0),
-    CFrame.new(51.5, 10, 0)
-}
 
 function doGoaltend()
     spawn(function()
@@ -320,7 +341,11 @@ function doGoaltend()
                     local distanceToBall = (basketball.Position - rimCFrame.Position).magnitude
 
                     if distanceToRim <= playerNearRimDistance and distanceToBall <= basketballNearRimDistance then
-                        player.Character.HumanoidRootPart.CFrame = rimCFrame
+                        local tweenInfo = TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
+                        local tweenGoal = { CFrame = rimCFrame }
+                        local tween = TweenService:Create(humanoidRootPart, tweenInfo, tweenGoal)
+                        tween:Play()
+                        tween.Completed:Wait()
                         break
                     end
                 end
@@ -385,35 +410,43 @@ function doReach()
         while getgenv().Reach do
             wait(0.040)
             local player = Players.LocalPlayer
+            local character = player.Character or player.CharacterAdded:Wait()
+            local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
             local basketball = workspace:FindFirstChild("Basketball")
-            local reachMultiplier = 3
-            local normalReachDistance = 3 * 0.3048
-            local basketballSizeMultiplier = 1.8
+            local normalReachDistance = 3 * 0.3048 -- 3 feet in studs
+            local opponentReachDistance = 4 * 0.3048 -- 4 feet in studs
 
-            if basketball then
-                basketball.Size = basketball.Size * basketballSizeMultiplier
+            if basketball and humanoidRootPart then
+                local ballDistance = (basketball.Position - humanoidRootPart.Position).magnitude
 
-                for _, otherPlayer in pairs(Players:GetPlayers()) do
-                    if otherPlayer.Team ~= player.Team and otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                        local distance = (otherPlayer.Character.HumanoidRootPart.Position - player.Character.HumanoidRootPart.Position).magnitude
+                if ballDistance <= normalReachDistance then
+                    -- Simulate key press to steal the ball
+                    local stealKey = Enum.KeyCode.Q
 
-                        if distance < normalReachDistance * reachMultiplier and basketball:IsDescendantOf(otherPlayer.Character) then
-                            local originalReach = player.Character.HumanoidRootPart.Size
-                            player.Character.HumanoidRootPart.Size = originalReach * reachMultiplier
-                            local stealKey = Enum.KeyCode.Q
+                    local function simulateKeyPress(key)
+                        VirtualInputManager:SendKeyEvent(true, key, false, game)
+                        wait(0.1)
+                        VirtualInputManager:SendKeyEvent(false, key, false, game)
+                    end
 
-                            local function simulateKeyPress(key)
-                                local inputObject = Instance.new("InputObject")
-                                inputObject.KeyCode = key
-                                inputObject.UserInputType = Enum.UserInputType.Keyboard
-                                UserInputService.InputBegan:Fire(inputObject)
-                                wait(0.1)
-                                UserInputService.InputEnded:Fire(inputObject)
+                    simulateKeyPress(stealKey)
+                else
+                    for _, otherPlayer in pairs(Players:GetPlayers()) do
+                        if otherPlayer.Team ~= player.Team and otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                            local distance = (otherPlayer.Character.HumanoidRootPart.Position - humanoidRootPart.Position).magnitude
+
+                            if distance <= opponentReachDistance and basketball:IsDescendantOf(otherPlayer.Character) then
+                                -- Simulate key press to steal the ball
+                                local stealKey = Enum.KeyCode.Q
+
+                                local function simulateKeyPress(key)
+                                    VirtualInputManager:SendKeyEvent(true, key, false, game)
+                                    wait(0.1)
+                                    VirtualInputManager:SendKeyEvent(false, key, false, game)
+                                end
+
+                                simulateKeyPress(stealKey)
                             end
-
-                            simulateKeyPress(stealKey)
-                            wait(0.1)
-                            player.Character.HumanoidRootPart.Size = originalReach
                         end
                     end
                 end
@@ -477,7 +510,11 @@ function doBlockShots()
                             local directionToBall = (basketball.Position - humanoidRootPart.Position).unit
                             local targetPosition = basketball.Position + directionToBall * -0.3048 -- 1 foot in front of the basketball
                             humanoidRootPart.CFrame = CFrame.new(targetPosition)
-                            humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+                            
+                            -- Simulate the jump key press (spacebar)
+                            VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
+                            wait(0.1)
+                            VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
                         end
                     end
 
@@ -506,7 +543,9 @@ Players.PlayerAdded:Connect(checkPlayer)
 
 for _, player in pairs(Players:GetPlayers()) do
     checkPlayer(player)
-end
+	end
+
+
 
 doInfstamina()
 doInbound()
