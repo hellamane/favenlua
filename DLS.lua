@@ -15,8 +15,7 @@ local Humanoid = Character:WaitForChild("Humanoid")
 local RootPart = Character:WaitForChild("HumanoidRootPart")
 
 local platform = nil
-local platformColor = Color3.fromRGB(100, 100, 100) -- Grey color
-
+local platformColor = Color3.fromRGB(100, 100, 100)
 local function createPlatform(position)
     if platform then platform:Destroy() end
     platform = Instance.new("Part")
@@ -25,7 +24,7 @@ local function createPlatform(position)
     platform.CanCollide = true
     platform.Color = platformColor
     platform.Material = Enum.Material.Concrete
-    platform.Position = position + Vector3.new(0, -3, 0) -- Below target
+    platform.Position = position + Vector3.new(0, -3, 0)
     platform.Parent = workspace
 end
 
@@ -102,21 +101,36 @@ end
 local kothToggled = false
 local flagToggled = false
 local kothPlatform = nil
+local originalCollisionGroups = {}
+local isNoClipping = false
 
 local function handleKOTH(toggle)
     kothToggled = toggle
-    toggleNoClip(toggle or flagToggled)
+    --toggleNoClip(toggle or flagToggled)
     if toggle then
         if Humanoid and RootPart then
-            Humanoid.Platform = false -- Disable fake freeze temporarily
+            Humanoid.Platform = false
             RootPart.Anchored = false
             local charPrimaryPart = Character:FindFirstChild("HumanoidRootPart")
             if charPrimaryPart then
+                -- Store original collision groups and set to NoCollision
+                isNoClipping = true;
+                for _, part in ipairs(Character:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        if part.Name ~= "Floor" then
+                            originalCollisionGroups[part] = part.CollisionGroup
+                            part.CollisionGroup = "NoCollision"
+                        elseif Humanoid.FloorMaterial == Enum.Material.Air then
+                            originalCollisionGroups[part] = part.CollisionGroup;
+                            part.CollisionGroup = "NoCollision";
+                        end
+                    end
+                end
                 charPrimaryPart.CanCollide = false
             end
             kothPlatform = smoothTeleportTarget(kothCFrame + Vector3.new(0, -3, 0), Color3.fromRGB(255, 0, 0))
-            task.wait(1.6) -- Wait for the tween to finish (adjust if needed)
-            Humanoid.Platform = true -- Re-enable fake freeze
+            task.wait(1.6)
+            Humanoid.Platform = true
             RootPart.Anchored = true
         end
     else
@@ -128,24 +142,45 @@ local function handleKOTH(toggle)
             kothPlatform:Destroy()
             kothPlatform = nil
         end
+
+        if not flagToggled then
+            isNoClipping = false;
+            for part, group in pairs(originalCollisionGroups) do
+                if part and IsValid(part) then
+                    part.CollisionGroup = group
+                end
+            end
+            originalCollisionGroups = {}
+        end
     end
 end
 
 local flagPlatform = nil
 local function handleFlag(toggle)
     flagToggled = toggle
-    toggleNoClip(toggle or kothToggled)
     if toggle then
         if Humanoid and RootPart then
-            Humanoid.Platform = false -- Disable fake freeze temporarily
+            Humanoid.Platform = false
             RootPart.Anchored = false
             local charPrimaryPart = Character:FindFirstChild("HumanoidRootPart")
             if charPrimaryPart then
+                isNoClipping = true;
+                for _, part in ipairs(Character:GetDescendants()) do
+                   if part:IsA("BasePart") then
+                        if part.Name ~= "Floor" then
+                            originalCollisionGroups[part] = part.CollisionGroup
+                            part.CollisionGroup = "NoCollision"
+                        elseif Humanoid.FloorMaterial == Enum.Material.Air then
+                            originalCollisionGroups[part] = part.CollisionGroup;
+                            part.CollisionGroup = "NoCollision";
+                        end
+                    end
+                end
                 charPrimaryPart.CanCollide = false
             end
             flagPlatform = smoothTeleportTarget(flagCFrame + Vector3.new(0, -3, 0), Color3.fromRGB(0, 0, 255))
-            task.wait(1.6) -- Wait for the tween to finish (adjust if needed)
-            Humanoid.Platform = true -- Re-enable fake freeze
+            task.wait(1.6)
+            Humanoid.Platform = true
             RootPart.Anchored = true
         end
     else
@@ -156,6 +191,16 @@ local function handleFlag(toggle)
         if flagPlatform then
             flagPlatform:Destroy()
             flagPlatform = nil
+        end
+
+         if not kothToggled then
+            isNoClipping = false;
+            for part, group in pairs(originalCollisionGroups) do
+                if part and IsValid(part) then
+                    part.CollisionGroup = group
+                end
+            end
+            originalCollisionGroups = {}
         end
     end
 end
@@ -178,7 +223,7 @@ local function toggleNoClip(enable)
             end
         end
         if Humanoid then
-            Humanoid.WalkSpeed = enable and 50 or 16 -- Optional speed increase while noclipping
+            Humanoid.WalkSpeed = enable and 50 or 16
             Humanoid.JumpPower = enable and 0 or 50
         end
     end
@@ -186,11 +231,12 @@ end
 
 local lastSafePosition = nil
 local antiVoidEnabled = false
+local antiVoidConnection = nil
 
 local function checkVoid()
     if antiVoidEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
         local rootPosition = LocalPlayer.Character.HumanoidRootPart.Position
-        if rootPosition.Y < -50 then -- Adjust the threshold as needed
+        if rootPosition.Y < -50 then
             if lastSafePosition then
                 local tweenInfo = TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
                 local tween = TweenService:Create(LocalPlayer.Character.HumanoidRootPart, tweenInfo, {CFrame = CFrame.new(lastSafePosition)})
@@ -199,6 +245,53 @@ local function checkVoid()
         else
             lastSafePosition = rootPosition
         end
+    end
+end
+
+local collectedObjects = {}
+local isCollectingEggsAndCoins = false
+
+local function collectEggsAndCoins(enabled)
+    isCollectingEggsAndCoins = enabled
+    if enabled then
+        collectedObjects = {}
+        local collectionRadius = 100
+        for _, obj in ipairs(Workspace:GetChildren()) do
+            if (obj.Name:lower():find("egg") or obj.Name:lower():find("coin")) and obj:IsA("BasePart") then
+                local distance = (RootPart.Position - obj.Position).Magnitude
+                if distance <= collectionRadius then
+                    collectedObjects[obj] = {
+                        originalPosition = obj.Position,
+                        transparency = obj.Transparency,
+                        canCollide = obj.CanCollide,
+                    }
+                    obj.Transparency = 1
+                    obj.CanCollide = false
+
+                    local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
+                    local tween = TweenService:Create(obj, tweenInfo, { Position = RootPart.Position })
+                    tween:Play()
+                    tween.Completed:Connect(function()
+                        obj:Destroy()
+                    end)
+                end
+            end
+        end
+    else
+        for obj, data in pairs(collectedObjects) do
+            if obj and IsValid(obj) then
+                local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
+                local tween = TweenService:Create(obj, tweenInfo, { Position = data.originalPosition })
+                tween:Play()
+                tween.Completed:Connect(function()
+                    obj.Transparency = data.transparency
+                    obj.CanCollide = data.canCollide
+                end)
+            else
+                warn("Object was already destroyed:", obj)
+            end
+        end
+        collectedObjects = {}
     end
 end
 
@@ -217,44 +310,11 @@ local woogy = serv:Channel("Autofarm")
 woogy:Toggle("Auto KOTH", false, handleKOTH)
 woogy:Toggle("Auto Capture Flag", false, handleFlag)
 woogy:Toggle("Collect Eggs Slowly", false, function(bool)
-    getgenv().CollectEggsSlowly = bool
-    if bool then
-        spawn(function()
-            while getgenv().CollectEggsSlowly do
-                local folder = workspace:FindFirstChild("Coins")
-                if folder then
-                    for _, obj in ipairs(folder:GetChildren()) do
-                        if obj.Name == "Egg" and obj:FindFirstChild("TouchInterest") then
-                            firetouchinterest(LocalPlayer.Character.PrimaryPart, obj, 1)
-                            firetouchinterest(LocalPlayer.Character.PrimaryPart, obj, 0)
-                            task.wait(0.7)
-                        end
-                    end
-                end
-                task.wait(1)
-            end
-        end)
-    end
+    collectEggsAndCoins(bool)
 end)
+
 woogy:Toggle("Collect Coins Slowly Detectable From Leaderboard", false, function(bool)
-    getgenv().CollectCoinsSlowly = bool
-    if bool then
-        spawn(function()
-            while getgenv().CollectCoinsSlowly do
-                local folder = workspace:FindFirstChild("Coins")
-                if folder then
-                    for _, obj in ipairs(folder:GetChildren()) do
-                        if obj.Name == "Coin" and obj:FindFirstChild("TouchInterest") then
-                            firetouchinterest(LocalPlayer.Character.PrimaryPart, obj, 1)
-                            firetouchinterest(LocalPlayer.Character.PrimaryPart, obj, 0)
-                            task.wait(0.7)
-                        end
-                    end
-                end
-                task.wait(1)
-            end
-        end)
-    end
+    collectEggsAndCoins(bool)
 end)
 
 local op = serv:Channel("OP Features")
@@ -288,14 +348,18 @@ gotn:Toggle("Anti-Void", false, function(bool)
     antiVoidEnabled = bool
     if bool then
         lastSafePosition = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and LocalPlayer.Character.HumanoidRootPart.Position or nil
-        RunService.Heartbeat:Connect(checkVoid)
+        antiVoidConnection = RunService.Heartbeat:Connect(checkVoid)
     else
-        RunService:Disconnect(checkVoid)
+        if antiVoidConnection then
+            antiVoidConnection:Disconnect()
+            antiVoidConnection = nil
+        end
         lastSafePosition = nil
     end
 end)
 
-gotn:Seperator() -- Separator before "Better Quality"
+gotn:Seperator()
+
 gotn:Button("Better Quality (rips)", function()
     _G.Settings = {
         Players = {["Ignore Me"] = true, ["Ignore Others"] = true},
@@ -307,7 +371,7 @@ gotn:Button("Better Quality (rips)", function()
     }
     loadstring(game:HttpGet("https://raw.githubusercontent.com/CasperFlyModz/discord.gg-rips/main/FPSBooster.lua"))()
 end)
-gotn:Seperator() -- Separator after "Better Quality"
+gotn:Seperator()
 
 gotn:Button("FPS Boost", function()
     local function optimizeSettings()
