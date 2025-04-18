@@ -99,17 +99,50 @@ local function smoothTeleportTarget(targetCFrame, platformColor)
     return platform
 end
 
+local kothToggled = false
+local flagToggled = false
 local kothPlatform = nil
+
 local function handleKOTH(toggle)
+    kothToggled = toggle
+    toggleNoClip(toggle or flagToggled)
     if toggle then
-        kothPlatform = smoothTeleportTarget(kothCFrame, Color3.fromRGB(255, 0, 0))
+        kothPlatform = smoothTeleportTarget(kothCFrame + Vector3.new(0, -3, 0), Color3.fromRGB(255, 0, 0))
+        if Humanoid and RootPart then
+            Humanoid.Platform = true -- Fake freeze
+            RootPart.Anchored = true
+        end
     else
-        local tween = TweenService:Create(LocalPlayer.Character.PrimaryPart, TweenInfo.new(1.5, Enum.EasingStyle.Quad), {CFrame = spawnCFrame})
-        tween:Play()
-        tween.Completed:Connect(function()
-            LocalPlayer.Character.PrimaryPart.CanCollide = true
-            if kothPlatform then kothPlatform:Destroy() end
-        end)
+        if Humanoid and RootPart then
+            Humanoid.Platform = false
+            RootPart.Anchored = false
+        end
+        if kothPlatform then
+            kothPlatform:Destroy()
+            kothPlatform = nil
+        end
+    end
+end
+
+local flagPlatform = nil
+local function handleFlag(toggle)
+    flagToggled = toggle
+    toggleNoClip(toggle or kothToggled)
+    if toggle then
+        flagPlatform = smoothTeleportTarget(flagCFrame + Vector3.new(0, -3, 0), Color3.fromRGB(0, 0, 255))
+        if Humanoid and RootPart then
+            Humanoid.Platform = true -- Fake freeze
+            RootPart.Anchored = true
+        end
+    else
+        if Humanoid and RootPart then
+            Humanoid.Platform = false
+            RootPart.Anchored = false
+        end
+        if flagPlatform then
+            flagPlatform:Destroy()
+            flagPlatform = nil
+        end
     end
 end
 
@@ -168,7 +201,7 @@ lbls:Seperator()
 
 local woogy = serv:Channel("Autofarm")
 woogy:Toggle("Auto KOTH", false, handleKOTH)
-woogy:Toggle("Auto Capture Flag", false, function(bool) print("Auto Capture Flag:", bool) end) -- Placeholder
+woogy:Toggle("Auto Capture Flag", false, handleFlag)
 woogy:Toggle("Collect Eggs Slowly", false, function(bool)
     getgenv().CollectEggsSlowly = bool
     if bool then
@@ -214,7 +247,6 @@ local op = serv:Channel("OP Features")
 local opEnabled = false
 local allowedRebirthValues = {1, 5, 10, 30, 50, 100, 500, 750, 1000, 2500, 5000, 20000, 50000, 75000, 100000}
 local autoRebirthEnabled = false
-local noclipToggle
 
 local function setAutoRebirthAmount(amount)
     if not LocalPlayer then return end
@@ -241,17 +273,12 @@ local function setAutoRebirthAmount(amount)
     end
 end
 
-op:Toggle("Auto Rebirth", false, function(bool)
-    autoRebirthEnabled = bool
-    getgenv().AutoRebirth = bool
-    if not bool then print("Auto Rebirth Disabled.") end
-end)
-
 local sldr = op:Slider("Rebirth Amount", 1, #allowedRebirthValues, 1, function(index)
     local selectedAmount = allowedRebirthValues[index]
     getgenv().AutoRebirthAmount = selectedAmount
     print("Selected Auto Rebirth Amount:", selectedAmount)
-    if autoRebirthEnabled then setAutoRebirthAmount(selectedAmount) end
+    autoRebirthEnabled = true -- Enable auto-rebirth when a value is selected
+    setAutoRebirthAmount(selectedAmount)
 end)
 sldr:SetLabels(allowedRebirthValues)
 getgenv().AutoRebirthAmount = allowedRebirthValues[1]
@@ -286,8 +313,6 @@ op:Button("Toggle OP Mode", function()
         if boost and boost:IsA("NumberValue") then boost.Value = opEnabled and 1000 or 1 end
     end
 end)
-
-noclipToggle = op:Toggle("No Clip", false, toggleNoClip)
 
 local gotn = serv:Channel("Misc")
 
