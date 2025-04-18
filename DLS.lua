@@ -5,79 +5,20 @@ local modIDs = {
 
 local TeleportService = game:GetService("TeleportService")
 local Players = game:GetService("Players")
+local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
 local TweenService = game:GetService("TweenService")
 local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
-local StarterGui = game:GetService("StarterGui")
-
-local function showNotification()
-    StarterGui:SetCore("SendNotification", {
-        Title = "Ferret Hub V2",
-        Text = "Change Rebirths While Using OP Features",
-        Duration = 10,
-        Button1 = "Join Discord",
-        Callback = function(response)
-            if response == "Button1" then
-                setclipboard("https://discord.gg/c8hPCcPbNq")
-                StarterGui:SetCore("SendNotification", {
-                    Title = "Discord",
-                    Text = "Discord invite copied to clipboard!",
-                    Duration = 3
-                })
-            end
-        end
-    })
-end
-
-showNotification()
-
-
-local function configureOP()
-    local player = game:GetService("Players").LocalPlayer
-    
-
-    if player:FindFirstChild("TierData") then
-        local OPness = {
-            player.TierData:FindFirstChild("Basic") and player.TierData.Basic:FindFirstChild("Active"),
-            player.TierData:FindFirstChild("Cool") and player.TierData.Cool:FindFirstChild("Active"),
-            player.TierData:FindFirstChild("Legend") and player.TierData.Legend:FindFirstChild("Active")
-        }
-        
-        for _, setting in ipairs(OPness) do
-            if setting then
-                setting.Value = true
-            end
-        end
-    end
-
-    if player:FindFirstChild("Boosts") then
-        local boostPaths = {
-            "QuadStrength",
-            "TripleHatch",
-            "QuadCoins",
-            "DoubleXP",
-            "DoubleTokens",
-            "DoubleCoins",
-            "DecaStrength",
-            "AutoTrain"
-        }
-        
-        for _, boostName in ipairs(boostPaths) do
-            local boost = player.Boosts:FindFirstChild(boostName)
-            if boost then
-                boost.Value = 1000
-            end
-        end
-    end
-end
-
+local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local Humanoid = Character:WaitForChild("Humanoid")
+local RootPart = Character:WaitForChild("HumanoidRootPart")
 
 local platform = nil
 local platformColor = Color3.fromRGB(100, 100, 100) -- Grey color
 
 local function createPlatform(position)
     if platform then platform:Destroy() end
-    
     platform = Instance.new("Part")
     platform.Size = Vector3.new(20, 1, 20)
     platform.Anchored = true
@@ -88,29 +29,15 @@ local function createPlatform(position)
     platform.Parent = workspace
 end
 
-
 local function smoothTeleport(cframe)
     local character = LocalPlayer.Character
     if not character or not character.PrimaryPart then return end
-    
     createPlatform(cframe.Position)
-    
-    local tweenInfo = TweenInfo.new(
-        1, -- Time
-        Enum.EasingStyle.Quad,
-        Enum.EasingDirection.Out
-    )
-    
-    local tween = TweenService:Create(
-        character.PrimaryPart,
-        tweenInfo,
-        {CFrame = cframe}
-    )
-    
+    local tweenInfo = TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    local tween = TweenService:Create(character.PrimaryPart, tweenInfo, {CFrame = cframe})
     tween:Play()
     tween.Completed:Wait()
 end
-
 
 local function teleportToAnotherServer()
     local gamePlaceId = game.PlaceId
@@ -124,7 +51,6 @@ local function teleportToAnotherServer()
     end
 end
 
-
 local function checkForMods()
     for _, player in ipairs(Players:GetPlayers()) do
         if table.find(modIDs, player.UserId) then
@@ -135,7 +61,6 @@ local function checkForMods()
     end
 end
 
-
 Players.PlayerAdded:Connect(function(player)
     if table.find(modIDs, player.UserId) then
         teleportToAnotherServer()
@@ -143,10 +68,7 @@ Players.PlayerAdded:Connect(function(player)
     end
 end)
 
-RunService.Heartbeat:Connect(function()
-    checkForMods()
-end)
-
+RunService.Heartbeat:Connect(checkForMods)
 checkForMods()
 
 local spawnCFrame = CFrame.new(118, 1704, 5494)
@@ -166,18 +88,12 @@ local function createPlatform(position, color)
     return platform
 end
 
-local function smoothTeleport(targetCFrame, platformColor)
+local function smoothTeleportTarget(targetCFrame, platformColor)
     local character = LocalPlayer.Character
     if not character or not character.PrimaryPart then return end
-    
     character.PrimaryPart.CanCollide = false
     local platform = createPlatform(targetCFrame.Position, platformColor)
-    
-    local tween = TweenService:Create(
-        character.PrimaryPart,
-        TweenInfo.new(1.5, Enum.EasingStyle.Quad),
-        {CFrame = targetCFrame}
-    )
+    local tween = TweenService:Create(character.PrimaryPart, TweenInfo.new(1.5, Enum.EasingStyle.Quad), {CFrame = targetCFrame})
     tween:Play()
     tween.Completed:Wait()
     return platform
@@ -186,13 +102,9 @@ end
 local kothPlatform = nil
 local function handleKOTH(toggle)
     if toggle then
-        kothPlatform = smoothTeleport(kothCFrame, Color3.fromRGB(255, 0, 0))
+        kothPlatform = smoothTeleportTarget(kothCFrame, Color3.fromRGB(255, 0, 0))
     else
-        local tween = TweenService:Create(
-            LocalPlayer.Character.PrimaryPart,
-            TweenInfo.new(1.5, Enum.EasingStyle.Quad),
-            {CFrame = spawnCFrame}
-        )
+        local tween = TweenService:Create(LocalPlayer.Character.PrimaryPart, TweenInfo.new(1.5, Enum.EasingStyle.Quad), {CFrame = spawnCFrame})
         tween:Play()
         tween.Completed:Connect(function()
             LocalPlayer.Character.PrimaryPart.CanCollide = true
@@ -201,118 +113,45 @@ local function handleKOTH(toggle)
     end
 end
 
-local flagPlatform = nil
-local function handleFlag(toggle)
-    if toggle then
-        flagPlatform = smoothTeleport(flagCFrame, Color3.fromRGB(0, 0, 255))
-    else
-        local tween = TweenService:Create(
-            LocalPlayer.Character.PrimaryPart,
-            TweenInfo.new(1.5, Enum.EasingStyle.Quad),
-            {CFrame = spawnCFrame}
-        )
-        tween:Play()
-        tween.Completed:Connect(function()
-            LocalPlayer.Character.PrimaryPart.CanCollide = true
-            if flagPlatform then flagPlatform:Destroy() end
-        end)
-    end
-end
+local noclipEnabled = false
+local originalCollisionGroup = nil
 
-
-local flying = false
-local FlyTrack = nil
-local currentFlyDirection = Vector3.zero
-local flyConnection = nil
-
-
-local function initializeFlying(character, humanoid)
-    local FlyAnimation = Instance.new("Animation")
-    FlyAnimation.AnimationId = "rbxassetid://11372296693"
-    local track = humanoid:LoadAnimation(FlyAnimation)
-    return track
-end
-
-local function updateFlyDirection()
-    local direction = Vector3.zero
-    local camera = workspace.CurrentCamera
-    local UIS = game:GetService("UserInputService")
-    if UIS:IsKeyDown(Enum.KeyCode.W) then
-        direction = direction + camera.CFrame.LookVector
-    end
-    if UIS:IsKeyDown(Enum.KeyCode.S) then
-        direction = direction - camera.CFrame.LookVector
-    end
-    if UIS:IsKeyDown(Enum.KeyCode.A) then
-        direction = direction - camera.CFrame.RightVector
-    end
-    if UIS:IsKeyDown(Enum.KeyCode.D) then
-        direction = direction + camera.CFrame.RightVector
-    end
-
-    if direction.Magnitude == 0 then
-        direction = currentFlyDirection
-    else
-        currentFlyDirection = direction.Unit
-    end
-    return direction.Unit
-end
-
-local function startFlying()
-    if not flying then
-        local character = LocalPlayer.Character
-        if not character or not character:FindFirstChild("Humanoid") then return end
-        local humanoid = character:FindFirstChild("Humanoid")
-        local rootPart = character:FindFirstChild("HumanoidRootPart")
-        if not humanoid or not rootPart then return end
-
-        flying = true
-        FlyTrack = initializeFlying(character, humanoid)
-        FlyTrack:Play()
-
-        workspace.Gravity = 0
-        humanoid.JumpPower = 0
-
-        currentFlyDirection = rootPart.CFrame.LookVector
-
-        flyConnection = RunService.RenderStepped:Connect(function()
-            if flying then
-                local flyDirection = updateFlyDirection()
-                local finalVelocity = flyDirection * 60
-                rootPart.Velocity = Vector3.new(finalVelocity.X, finalVelocity.Y, finalVelocity.Z)
+local function toggleNoClip(enable)
+    noclipEnabled = enable
+    local character = LocalPlayer.Character
+    if character and character:FindFirstChild("HumanoidRootPart") then
+        for _, part in ipairs(character:GetDescendants()) do
+            if part:IsA("BasePart") and part.CanCollide then
+                if enable then
+                    originalCollisionGroup = part.CollisionGroup
+                    part.CollisionGroup = "NoCollision"
+                else
+                    part.CollisionGroup = originalCollisionGroup
+                end
             end
-        end)
+        end
+        if Humanoid then
+            Humanoid.WalkSpeed = enable and 50 or 16 -- Optional speed increase while noclipping
+            Humanoid.JumpPower = enable and 0 or 50
+        end
     end
 end
 
-local function stopFlying()
-    if flying then
-        local character = LocalPlayer.Character
-        if not character or not character:FindFirstChild("Humanoid") then return end
-        local humanoid = character:FindFirstChild("Humanoid")
-        local rootPart = character:FindFirstChild("HumanoidRootPart")
-        if not humanoid or not rootPart then return end
+local lastSafePosition = nil
+local antiVoidEnabled = false
 
-        flying = false
-        if FlyTrack then
-            FlyTrack:Stop()
+local function checkVoid()
+    if antiVoidEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        local rootPosition = LocalPlayer.Character.HumanoidRootPart.Position
+        if rootPosition.Y < -50 then -- Adjust the threshold as needed
+            if lastSafePosition then
+                local tweenInfo = TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
+                local tween = TweenService:Create(LocalPlayer.Character.HumanoidRootPart, tweenInfo, {CFrame = CFrame.new(lastSafePosition)})
+                tween:Play()
+            end
+        else
+            lastSafePosition = rootPosition
         end
-        if flyConnection then
-            flyConnection:Disconnect()
-            flyConnection = nil
-        end
-        -- Restore gravity and jump
-        workspace.Gravity = 196.2
-        humanoid.JumpPower = 50
-        rootPart.Velocity = Vector3.new(0, -30, 0)
-    end
-end
-
-local function toggleFly()
-    if flying then
-        stopFlying()
-    else
-        startFlying()
     end
 end
 
@@ -328,28 +167,20 @@ lbls:Label("Welcome to Ferret Hub!")
 lbls:Seperator()
 
 local woogy = serv:Channel("Autofarm")
-
-woogy:Label("Use Noclip for KOTH.")
-
 woogy:Toggle("Auto KOTH", false, handleKOTH)
-
-woogy:Seperator()
-
-woogy:Toggle("Auto Capture Flag", false, handleFlag)
-
-woogy:Seperator()
-
-woogy:Toggle("Collect Eggs", false, function(bool)
-    getgenv().CollectEggs = bool
+woogy:Toggle("Auto Capture Flag", false, function(bool) print("Auto Capture Flag:", bool) end) -- Placeholder
+woogy:Toggle("Collect Eggs Slowly", false, function(bool)
+    getgenv().CollectEggsSlowly = bool
     if bool then
         spawn(function()
-            while getgenv().CollectEggs do
+            while getgenv().CollectEggsSlowly do
                 local folder = workspace:FindFirstChild("Coins")
                 if folder then
                     for _, obj in ipairs(folder:GetChildren()) do
                         if obj.Name == "Egg" and obj:FindFirstChild("TouchInterest") then
                             firetouchinterest(LocalPlayer.Character.PrimaryPart, obj, 1)
                             firetouchinterest(LocalPlayer.Character.PrimaryPart, obj, 0)
+                            task.wait(0.7)
                         end
                     end
                 end
@@ -358,20 +189,18 @@ woogy:Toggle("Collect Eggs", false, function(bool)
         end)
     end
 end)
-
-woogy:Seperator()
-
-woogy:Toggle("Collect Coins Detectable From Leaderboard", false, function(bool)
-    getgenv().CollectCoins = bool
+woogy:Toggle("Collect Coins Slowly Detectable From Leaderboard", false, function(bool)
+    getgenv().CollectCoinsSlowly = bool
     if bool then
         spawn(function()
-            while getgenv().CollectCoins do
+            while getgenv().CollectCoinsSlowly do
                 local folder = workspace:FindFirstChild("Coins")
                 if folder then
                     for _, obj in ipairs(folder:GetChildren()) do
                         if obj.Name == "Coin" and obj:FindFirstChild("TouchInterest") then
                             firetouchinterest(LocalPlayer.Character.PrimaryPart, obj, 1)
                             firetouchinterest(LocalPlayer.Character.PrimaryPart, obj, 0)
+                            task.wait(0.7)
                         end
                     end
                 end
@@ -382,85 +211,123 @@ woogy:Toggle("Collect Coins Detectable From Leaderboard", false, function(bool)
 end)
 
 local op = serv:Channel("OP Features")
+local opEnabled = false
+local allowedRebirthValues = {1, 5, 10, 30, 50, 100, 500, 750, 1000, 2500, 5000, 20000, 50000, 75000, 100000}
+local autoRebirthEnabled = false
+local noclipToggle
 
-op:Label("Use The Rebirth Script Located In The Discord So It Works Fully.")
-op:Toggle("Enable OP Mode", false, function(bool)
-    getgenv().OPMode = bool
-    if bool then
-        pcall(configureOP)
+local function setAutoRebirthAmount(amount)
+    if not LocalPlayer then return end
+    if table.find(allowedRebirthValues, amount) then
+        local playerData = LocalPlayer:FindFirstChild("PlayerData")
+        if not playerData then
+            playerData = Instance.new("Folder", LocalPlayer)
+            playerData.Name = "PlayerData"
+        end
+        local autoRebirthConfig = playerData:FindFirstChild("AutoRebirthConfig")
+        if not autoRebirthConfig then
+            autoRebirthConfig = Instance.new("Folder", playerData)
+            autoRebirthConfig.Name = "AutoRebirthConfig"
+        end
+        local autoAmount = autoRebirthConfig:FindFirstChild("AutoAmount")
+        if not autoAmount then
+            autoAmount = Instance.new("IntValue", autoRebirthConfig)
+            autoAmount.Name = "AutoAmount"
+        end
+        autoAmount.Value = amount
+        print("Auto Rebirth Amount set to:", amount)
+    else
+        warn("Invalid Auto Rebirth Amount! Allowed values are:", table.concat(allowedRebirthValues, ", "))
+    end
+end
+
+op:Toggle("Auto Rebirth", false, function(bool)
+    autoRebirthEnabled = bool
+    getgenv().AutoRebirth = bool
+    if not bool then print("Auto Rebirth Disabled.") end
+end)
+
+local sldr = op:Slider("Rebirth Amount", 1, #allowedRebirthValues, 1, function(index)
+    local selectedAmount = allowedRebirthValues[index]
+    getgenv().AutoRebirthAmount = selectedAmount
+    print("Selected Auto Rebirth Amount:", selectedAmount)
+    if autoRebirthEnabled then setAutoRebirthAmount(selectedAmount) end
+end)
+sldr:SetLabels(allowedRebirthValues)
+getgenv().AutoRebirthAmount = allowedRebirthValues[1]
+
+spawn(function()
+    while true do
+        if autoRebirthEnabled then setAutoRebirthAmount(getgenv().AutoRebirthAmount) end
+        task.wait(1)
     end
 end)
 
-op:Seperator()
+op:Button("Toggle OP Mode", function()
+    opEnabled = not opEnabled
+    getgenv().OPMode = opEnabled
+    local player = game:GetService("Players").LocalPlayer
+    if not player then return end
+    local boosts = player:FindFirstChild("Boosts")
+    if not boosts then return end
+    local OPness = player:FindFirstChild("OPness")
+    if OPness then
+        for _, setting in ipairs(OPness:GetChildren()) do
+            if setting:IsA("BoolValue") then setting.Value = opEnabled end
+        end
+    end
+    local numberValues = {
+        boosts:FindFirstChild("QuadStrength"), boosts:FindFirstChild("TripleHatch"),
+        boosts:FindFirstChild("QuadCoins"), boosts:FindFirstChild("DoubleXP"),
+        boosts:FindFirstChild("DoubleTokens"), boosts:FindFirstChild("DoubleCoins"),
+        boosts:FindFirstChild("DecaStrength"), boosts:FindFirstChild("AutoTrain")
+    }
+    for _, boost in ipairs(numberValues) do
+        if boost and boost:IsA("NumberValue") then boost.Value = opEnabled and 1000 or 1 end
+    end
+end)
 
-op:Label("Click The Fly Button To Fly")
-
-op:Button("Activate Flight", toggleFly)
-
-local function toggleFly()
-    toggleFly()
-end
+noclipToggle = op:Toggle("No Clip", false, toggleNoClip)
 
 local gotn = serv:Channel("Misc")
+
+gotn:Toggle("Anti-Void", false, function(bool)
+    antiVoidEnabled = bool
+    if bool then
+        lastSafePosition = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and LocalPlayer.Character.HumanoidRootPart.Position or nil
+        RunService.Heartbeat:Connect(checkVoid)
+    else
+        RunService:Disconnect(checkVoid)
+        lastSafePosition = nil
+    end
+end)
 
 gotn:Button("FPS Boost", function()
     local function optimizeSettings()
         settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
-
         local lighting = game:GetService("Lighting")
         lighting.GlobalShadows = false
         lighting.FogEnd = 9e9
         lighting.Brightness = 0
-
         local function removeParts(instance)
-            if instance:IsA("BasePart") then
-                instance.Material = Enum.Material.SmoothPlastic
-                instance.Reflectance = 0
-                instance.CastShadow = false
-            elseif instance:IsA("Decal") or instance:IsA("Texture") then
-                instance:Destroy()
-            elseif instance:IsA("ParticleEmitter") or instance:IsA("Trail") or instance:IsA("Beam") then
-                instance:Destroy()
-            end
+            if instance:IsA("BasePart") then instance.Material = Enum.Material.SmoothPlastic instance.Reflectance = 0 instance.CastShadow = false
+            elseif instance:IsA("Decal") or instance:IsA("Texture") then instance:Destroy()
+            elseif instance:IsA("ParticleEmitter") or instance:IsA("Trail") or instance:IsA("Beam") then instance:Destroy() end
         end
-
-        for _, instance in pairs(workspace:GetDescendants()) do
-            removeParts(instance)
-        end
-
-        workspace.DescendantAdded:Connect(function(instance)
-            removeParts(instance)
-        end)
+        for _, instance in pairs(workspace:GetDescendants()) do removeParts(instance) end
+        workspace.DescendantAdded:Connect(removeParts)
     end
-
     optimizeSettings()
 end)
-
 gotn:Seperator()
-
 gotn:Button("Better Quality (rips)", function()
     _G.Settings = {
-        Players = {
-            ["Ignore Me"] = true,
-            ["Ignore Others"] = true
-        },
-        Meshes = {
-            Destroy = false,
-            LowDetail = true
-        },
-        Images = {
-            Invisible = true,
-            LowDetail = false,
-            Destroy = false,
-        },
-        ["No Particles"] = true,
-        ["No Camera Effects"] = true,
-        ["No Explosions"] = true,
-        ["No Clothes"] = true,
-        ["Low Water Graphics"] = true,
-        ["No Shadows"] = true,
-        ["Low Rendering"] = true,
-        ["Low Quality Parts"] = true
+        Players = {["Ignore Me"] = true, ["Ignore Others"] = true},
+        Meshes = {Destroy = false, LowDetail = true},
+        Images = {Invisible = true, LowDetail = false, Destroy = false},
+        ["No Particles"] = true, ["No Camera Effects"] = true, ["No Explosions"] = true,
+        ["No Clothes"] = true, ["Low Water Graphics"] = true, ["No Shadows"] = true,
+        ["Low Rendering"] = true, ["Low Quality Parts"] = true
     }
     loadstring(game:HttpGet("https://raw.githubusercontent.com/CasperFlyModz/discord.gg-rips/main/FPSBooster.lua"))()
 end)
