@@ -107,9 +107,16 @@ local function handleKOTH(toggle)
     kothToggled = toggle
     toggleNoClip(toggle or flagToggled)
     if toggle then
-        kothPlatform = smoothTeleportTarget(kothCFrame + Vector3.new(0, -3, 0), Color3.fromRGB(255, 0, 0))
         if Humanoid and RootPart then
-            Humanoid.Platform = true -- Fake freeze
+            Humanoid.Platform = false -- Disable fake freeze temporarily
+            RootPart.Anchored = false
+            local charPrimaryPart = Character:FindFirstChild("HumanoidRootPart")
+            if charPrimaryPart then
+                charPrimaryPart.CanCollide = false
+            end
+            kothPlatform = smoothTeleportTarget(kothCFrame + Vector3.new(0, -3, 0), Color3.fromRGB(255, 0, 0))
+            task.wait(1.6) -- Wait for the tween to finish (adjust if needed)
+            Humanoid.Platform = true -- Re-enable fake freeze
             RootPart.Anchored = true
         end
     else
@@ -129,9 +136,16 @@ local function handleFlag(toggle)
     flagToggled = toggle
     toggleNoClip(toggle or kothToggled)
     if toggle then
-        flagPlatform = smoothTeleportTarget(flagCFrame + Vector3.new(0, -3, 0), Color3.fromRGB(0, 0, 255))
         if Humanoid and RootPart then
-            Humanoid.Platform = true -- Fake freeze
+            Humanoid.Platform = false -- Disable fake freeze temporarily
+            RootPart.Anchored = false
+            local charPrimaryPart = Character:FindFirstChild("HumanoidRootPart")
+            if charPrimaryPart then
+                charPrimaryPart.CanCollide = false
+            end
+            flagPlatform = smoothTeleportTarget(flagCFrame + Vector3.new(0, -3, 0), Color3.fromRGB(0, 0, 255))
+            task.wait(1.6) -- Wait for the tween to finish (adjust if needed)
+            Humanoid.Platform = true -- Re-enable fake freeze
             RootPart.Anchored = true
         end
     else
@@ -244,54 +258,8 @@ woogy:Toggle("Collect Coins Slowly Detectable From Leaderboard", false, function
 end)
 
 local op = serv:Channel("OP Features")
-local opEnabled = false
-local allowedRebirthValues = {1, 5, 10, 30, 50, 100, 500, 750, 1000, 2500, 5000, 20000, 50000, 75000, 100000}
-local autoRebirthEnabled = false
-
-local function setAutoRebirthAmount(amount)
-    if not LocalPlayer then return end
-    if table.find(allowedRebirthValues, amount) then
-        local playerData = LocalPlayer:FindFirstChild("PlayerData")
-        if not playerData then
-            playerData = Instance.new("Folder", LocalPlayer)
-            playerData.Name = "PlayerData"
-        end
-        local autoRebirthConfig = playerData:FindFirstChild("AutoRebirthConfig")
-        if not autoRebirthConfig then
-            autoRebirthConfig = Instance.new("Folder", playerData)
-            autoRebirthConfig.Name = "AutoRebirthConfig"
-        end
-        local autoAmount = autoRebirthConfig:FindFirstChild("AutoAmount")
-        if not autoAmount then
-            autoAmount = Instance.new("IntValue", autoRebirthConfig)
-            autoAmount.Name = "AutoAmount"
-        end
-        autoAmount.Value = amount
-        print("Auto Rebirth Amount set to:", amount)
-    else
-        warn("Invalid Auto Rebirth Amount! Allowed values are:", table.concat(allowedRebirthValues, ", "))
-    end
-end
-
-local sldr = op:Slider("Rebirth Amount", 1, #allowedRebirthValues, 1, function(index)
-    local selectedAmount = allowedRebirthValues[index]
-    getgenv().AutoRebirthAmount = selectedAmount
-    print("Selected Auto Rebirth Amount:", selectedAmount)
-    autoRebirthEnabled = true -- Enable auto-rebirth when a value is selected
-    setAutoRebirthAmount(selectedAmount)
-end)
-sldr:SetLabels(allowedRebirthValues)
-getgenv().AutoRebirthAmount = allowedRebirthValues[1]
-
-spawn(function()
-    while true do
-        if autoRebirthEnabled then setAutoRebirthAmount(getgenv().AutoRebirthAmount) end
-        task.wait(1)
-    end
-end)
-
 op:Button("Toggle OP Mode", function()
-    opEnabled = not opEnabled
+    local opEnabled = not getgenv().OPMode
     getgenv().OPMode = opEnabled
     local player = game:GetService("Players").LocalPlayer
     if not player then return end
@@ -327,6 +295,20 @@ gotn:Toggle("Anti-Void", false, function(bool)
     end
 end)
 
+gotn:Seperator() -- Separator before "Better Quality"
+gotn:Button("Better Quality (rips)", function()
+    _G.Settings = {
+        Players = {["Ignore Me"] = true, ["Ignore Others"] = true},
+        Meshes = {Destroy = false, LowDetail = true},
+        Images = {Invisible = true, LowDetail = false, Destroy = false},
+        ["No Particles"] = true, ["No Camera Effects"] = true, ["No Explosions"] = true,
+        ["No Clothes"] = true, ["Low Water Graphics"] = true, ["No Shadows"] = true,
+        ["Low Rendering"] = true, ["Low Quality Parts"] = true
+    }
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/CasperFlyModz/discord.gg-rips/main/FPSBooster.lua"))()
+end)
+gotn:Seperator() -- Separator after "Better Quality"
+
 gotn:Button("FPS Boost", function()
     local function optimizeSettings()
         settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
@@ -343,16 +325,4 @@ gotn:Button("FPS Boost", function()
         workspace.DescendantAdded:Connect(removeParts)
     end
     optimizeSettings()
-end)
-gotn:Seperator()
-gotn:Button("Better Quality (rips)", function()
-    _G.Settings = {
-        Players = {["Ignore Me"] = true, ["Ignore Others"] = true},
-        Meshes = {Destroy = false, LowDetail = true},
-        Images = {Invisible = true, LowDetail = false, Destroy = false},
-        ["No Particles"] = true, ["No Camera Effects"] = true, ["No Explosions"] = true,
-        ["No Clothes"] = true, ["Low Water Graphics"] = true, ["No Shadows"] = true,
-        ["Low Rendering"] = true, ["Low Quality Parts"] = true
-    }
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/CasperFlyModz/discord.gg-rips/main/FPSBooster.lua"))()
 end)
