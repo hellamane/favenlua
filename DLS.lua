@@ -16,6 +16,7 @@ local RootPart = Character:WaitForChild("HumanoidRootPart")
 
 local platform = nil
 local platformColor = Color3.fromRGB(100, 100, 100)
+
 local function createPlatform(position)
     if platform then platform:Destroy() end
     platform = Instance.new("Part")
@@ -92,7 +93,7 @@ local function smoothTeleportTarget(targetCFrame, platformColor)
     if not character or not character.PrimaryPart then return end
     character.PrimaryPart.CanCollide = false
     local platform = createPlatform(targetCFrame.Position, platformColor)
-    local tween = TweenService:Create(character.PrimaryPart, TweenInfo.new(1.5, Enum.EasingStyle.Quad), {CFrame = targetCFrame})
+    local tween = TweenService:Create(character.PrimaryPart, tweenInfo.new(1.5, Enum.EasingStyle.Quad), {CFrame = targetCFrame})
     tween:Play()
     tween.Completed:Wait()
     return platform
@@ -106,14 +107,12 @@ local isNoClipping = false
 
 local function handleKOTH(toggle)
     kothToggled = toggle
-    --toggleNoClip(toggle or flagToggled)
     if toggle then
         if Humanoid and RootPart then
             Humanoid.Platform = false
             RootPart.Anchored = false
             local charPrimaryPart = Character:FindFirstChild("HumanoidRootPart")
             if charPrimaryPart then
-                -- Store original collision groups and set to NoCollision
                 isNoClipping = true;
                 for _, part in ipairs(Character:GetDescendants()) do
                     if part:IsA("BasePart") then
@@ -142,7 +141,6 @@ local function handleKOTH(toggle)
             kothPlatform:Destroy()
             kothPlatform = nil
         end
-
         if not flagToggled then
             isNoClipping = false;
             for part, group in pairs(originalCollisionGroups) do
@@ -166,11 +164,11 @@ local function handleFlag(toggle)
             if charPrimaryPart then
                 isNoClipping = true;
                 for _, part in ipairs(Character:GetDescendants()) do
-                   if part:IsA("BasePart") then
+                    if part:IsA("BasePart") then
                         if part.Name ~= "Floor" then
                             originalCollisionGroups[part] = part.CollisionGroup
                             part.CollisionGroup = "NoCollision"
-                        elseif Humanoid.FloorMaterial == Enum.Material.Air then
+                         elseif Humanoid.FloorMaterial == Enum.Material.Air then
                             originalCollisionGroups[part] = part.CollisionGroup;
                             part.CollisionGroup = "NoCollision";
                         end
@@ -192,8 +190,7 @@ local function handleFlag(toggle)
             flagPlatform:Destroy()
             flagPlatform = nil
         end
-
-         if not kothToggled then
+        if not kothToggled then
             isNoClipping = false;
             for part, group in pairs(originalCollisionGroups) do
                 if part and IsValid(part) then
@@ -249,38 +246,133 @@ local function checkVoid()
 end
 
 local collectedObjects = {}
-local isCollectingEggsAndCoins = false
+local isCollectingEggs = false
+local isCollectingCoins = false
+local collectionInterval = 1
+local collectionTimeout = 0.3
 
-local function collectEggsAndCoins(enabled)
-    isCollectingEggsAndCoins = enabled
-    if enabled then
+local function collectEggs()
+    if isCollectingEggs then
         collectedObjects = {}
-        local collectionRadius = 100
-        for _, obj in ipairs(Workspace:GetChildren()) do
-            if (obj.Name:lower():find("egg") or obj.Name:lower():find("coin")) and obj:IsA("BasePart") then
-                local distance = (RootPart.Position - obj.Position).Magnitude
-                if distance <= collectionRadius then
-                    collectedObjects[obj] = {
-                        originalPosition = obj.Position,
-                        transparency = obj.Transparency,
-                        canCollide = obj.CanCollide,
-                    }
-                    obj.Transparency = 1
-                    obj.CanCollide = false
+        local collectedCount = 0
 
-                    local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
-                    local tween = TweenService:Create(obj, tweenInfo, { Position = RootPart.Position })
-                    tween:Play()
-                    tween.Completed:Connect(function()
-                        obj:Destroy()
-                    end)
+        local function collectSingleEgg()
+            local closestObj = nil
+            local closestDistance = math.huge
+
+            for _, obj in ipairs(Workspace:GetChildren()) do
+                if obj.Name:lower():find("egg") and obj:IsA("BasePart") then
+                    local distance = (RootPart.Position - obj.Position).Magnitude
+                    if distance < closestDistance then
+                        closestDistance = distance
+                        closestObj = obj
+                    end
                 end
             end
+
+            if closestObj then
+                collectedCount += 1
+                collectedObjects[closestObj] = {
+                    originalPosition = closestObj.Position,
+                    transparency = closestObj.Transparency,
+                    canCollide = closestObj.CanCollide,
+                }
+                closestObj.Transparency = 1
+                closestObj.CanCollide = false
+
+                local tweenInfo = TweenInfo.new(collectionTimeout, Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
+                local tween = TweenService:Create(closestObj, tweenInfo, { Position = RootPart.Position })
+                tween:Play()
+
+                tween.Completed:Connect(function()
+                    closestObj:Destroy()
+                    firetouchinterest(LocalPlayer.Character.PrimaryPart, closestObj, 1)
+                    firetouchinterest(LocalPlayer.Character.PrimaryPart, closestObj, 0)
+                    collectedCount -= 1
+                end)
+            end
+
+            if collectedCount == 0 then
+                task.delay(collectionInterval, function()
+                    if isCollectingEggs then
+                        collectEggs()
+                    end
+                end)
+            end
         end
+        collectSingleEgg()
     else
         for obj, data in pairs(collectedObjects) do
             if obj and IsValid(obj) then
-                local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
+                local tweenInfo = TweenInfo.new(collectionTimeout, Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
+                local tween = TweenService:Create(obj, tweenInfo, { Position = data.originalPosition })
+                tween:Play()
+                tween.Completed:Connect(function()
+                    obj.Transparency = data.transparency
+                    obj.CanCollide = data.canCollide
+                end)
+            else
+                warn("Object was already destroyed:", obj)
+            end
+        end
+        collectedObjects = {}
+    end
+end
+
+local function collectCoins()
+    if isCollectingCoins then
+        collectedObjects = {}
+        local collectedCount = 0
+
+        local function collectSingleCoin()
+            local closestObj = nil
+            local closestDistance = math.huge
+
+            for _, obj in ipairs(Workspace:GetChildren()) do
+                if obj.Name:lower():find("coin") and obj:IsA("BasePart") then
+                    local distance = (RootPart.Position - obj.Position).Magnitude
+                    if distance < closestDistance then
+                        closestDistance = distance
+                        closestObj = obj
+                    end
+                end
+            end
+
+            if closestObj then
+                collectedCount += 1
+                collectedObjects[closestObj] = {
+                    originalPosition = closestObj.Position,
+                    transparency = closestObj.Transparency,
+                    canCollide = closestObj.CanCollide,
+                }
+                closestObj.Transparency = 1
+                closestObj.CanCollide = false
+
+                local tweenInfo = TweenInfo.new(collectionTimeout, Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
+                local tween = TweenService:Create(closestObj, tweenInfo, { Position = RootPart.Position })
+                tween:Play()
+
+                tween.Completed:Connect(function()
+                    closestObj:Destroy()
+                    firetouchinterest(LocalPlayer.Character.PrimaryPart, closestObj, 1)
+                    firetouchinterest(LocalPlayer.Character.PrimaryPart, closestObj, 0)
+                    collectedCount -= 1
+                end)
+            end
+
+            if collectedCount == 0 then
+                task.delay(collectionInterval, function()
+                    if isCollectingCoins then
+                        collectCoins()
+                    end
+                end)
+            end
+        end
+        collectSingleCoin()
+    else
+        for obj, data in pairs(collectedObjects) do
+            if obj and IsValid(obj) then
+                 local tweenInfo = TweenInfo.new(collectionTimeout, Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
                 local tween = TweenService:Create(obj, tweenInfo, { Position = data.originalPosition })
                 tween:Play()
                 tween.Completed:Connect(function()
@@ -309,12 +401,13 @@ lbls:Seperator()
 local woogy = serv:Channel("Autofarm")
 woogy:Toggle("Auto KOTH", false, handleKOTH)
 woogy:Toggle("Auto Capture Flag", false, handleFlag)
-woogy:Toggle("Collect Eggs Slowly", false, function(bool)
-    collectEggsAndCoins(bool)
+woogy:Toggle("Collect Eggs", false, function(bool)
+    isCollectingEggs = bool
+    collectEggs()
 end)
-
-woogy:Toggle("Collect Coins Slowly Detectable From Leaderboard", false, function(bool)
-    collectEggsAndCoins(bool)
+woogy:Toggle("Collect Coins", false, function(bool)
+    isCollectingCoins = bool
+    collectCoins()
 end)
 
 local op = serv:Channel("OP Features")
@@ -359,7 +452,6 @@ gotn:Toggle("Anti-Void", false, function(bool)
 end)
 
 gotn:Seperator()
-
 gotn:Button("Better Quality (rips)", function()
     _G.Settings = {
         Players = {["Ignore Me"] = true, ["Ignore Others"] = true},
