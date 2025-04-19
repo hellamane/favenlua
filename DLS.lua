@@ -39,7 +39,7 @@ local function collectCoins()
                 firetouchinterest(coin, game.Players.LocalPlayer.Character.HumanoidRootPart, 1)
             end
         end
-        task.wait(1)
+        task.wait(0.6)
     end
 
     for coin, originalPosition in pairs(coinOriginalPositions) do
@@ -58,7 +58,7 @@ local function collectEggs()
                 firetouchinterest(egg, game.Players.LocalPlayer.Character.HumanoidRootPart, 1)
             end
         end
-        task.wait(1)
+        task.wait(0.6)
     end
 
     for egg, originalPosition in pairs(eggOriginalPositions) do
