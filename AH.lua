@@ -1,4 +1,4 @@
--- Arab Hoops (Hoops Demo)
+--// Arab Hoops (Hoops Demo) | Discord #steppin0nsteppas
 getgenv().Inbound = false
 getgenv().Follow = false
 getgenv().Goaltend = false
