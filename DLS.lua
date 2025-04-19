@@ -1,6 +1,7 @@
 --// Dominus Lifting Simulator | Discord #steppin0nsteppas
 getgenv().CollectCoins = false
 getgenv().CollectEggs = false
+getgenv().OPMode = false
 
 local modIDs = {
     1327199087, 3404114204, 417399445, 476757220, 17804357,
@@ -17,7 +18,7 @@ local coinOriginalPositions = {}
 local eggOriginalPositions = {}
 
 local function storeOriginalPositions()
-    for _, obj in pairs(workspace.Coins:GetChildren()) do
+    for _, obj in pairs(Workspace.Coins:GetChildren()) do
         if obj:IsA("MeshPart") and obj.Name == "Coin" then
             coinOriginalPositions[obj] = obj.Position
         elseif obj:IsA("MeshPart") and obj.Name == "Egg" then
@@ -33,7 +34,7 @@ local function collectCoins()
         local character = Players.LocalPlayer.Character or Players.LocalPlayer.CharacterAdded:Wait()
         local rootPart = character:WaitForChild("HumanoidRootPart")
 
-        for _, coin in pairs(workspace.Coins:GetChildren()) do
+        for _, coin in pairs(Workspace.Coins:GetChildren()) do
             if coin:IsA("MeshPart") and coin.Name == "Coin" then
                 firetouchinterest(coin, rootPart, 0)
                 task.wait(0.3)
@@ -55,7 +56,7 @@ local function collectEggs()
         local character = Players.LocalPlayer.Character or Players.LocalPlayer.CharacterAdded:Wait()
         local rootPart = character:WaitForChild("HumanoidRootPart")
 
-        for _, egg in pairs(workspace.Coins:GetChildren()) do
+        for _, egg in pairs(Workspace.Coins:GetChildren()) do
             if egg:IsA("MeshPart") and egg.Name == "Egg" then
                 firetouchinterest(egg, rootPart, 0)
                 task.wait(0.3)
@@ -131,6 +132,42 @@ woogy:Toggle("Collect Eggs Slowly", false, function(bool)
     end
 end)
 
+local op = serv:Channel("OP Features")
+op:Button("Activate OP Mode", function()
+    getgenv().OPMode = not getgenv().OPMode
+    local opEnabled = getgenv().OPMode
+    local player = Players.LocalPlayer
+    if not player then return end
+
+    -- Apply OP settings to boosts or similar values
+    local boosts = player:FindFirstChild("Boosts")
+    if boosts then
+        for _, setting in ipairs(boosts:GetChildren()) do
+            if setting:IsA("BoolValue") then
+                setting.Value = opEnabled
+            end
+        end
+        local numberValues = {
+            boosts:FindFirstChild("QuadStrength"), boosts:FindFirstChild("TripleHatch"),
+            boosts:FindFirstChild("QuadCoins"), boosts:FindFirstChild("DoubleXP"),
+            boosts:FindFirstChild("DoubleTokens"), boosts:FindFirstChild("DoubleCoins"),
+            boosts:FindFirstChild("DecaStrength"), boosts:FindFirstChild("AutoTrain")
+        }
+        for _, boost in ipairs(numberValues) do
+            if boost and boost:IsA("NumberValue") then
+                boost.Value = opEnabled and 1000 or 1
+            end
+        end
+    end
+
+    -- Print OP Mode status
+    if opEnabled then
+        print("OP Mode Activated!")
+    else
+        print("OP Mode Deactivated!")
+    end
+end)
+
 local gotn = serv:Channel("Misc")
 
 gotn:Toggle("Anti-Void", false, function(bool)
@@ -168,7 +205,7 @@ gotn:Button("FPS Boost", function()
         end
     end
 
-    local settings = game:GetService("Players").LocalPlayer:FindFirstChild("Settings")
+    local settings = Players.LocalPlayer:FindFirstChild("Settings")
     if settings then
         local boolValues = {
             settings:FindFirstChild("HideOtherPets"),
