@@ -2,9 +2,13 @@ local TeleportService = game:GetService("TeleportService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
-
 local function executeScript(scriptUrl)
-    loadstring(game:HttpGet(scriptUrl))()
+    local success, err = pcall(function()
+        loadstring(game:HttpGet(scriptUrl))()
+    end)
+    if not success then
+        warn("Error executing script: " .. tostring(err))
+    end
 end
 
 if game.PlaceId == 1254185591 then
@@ -15,10 +19,11 @@ elseif game.PlaceId == 83898177072058 then
     executeScript("https://raw.githubusercontent.com/hellamane/favenlua/refs/heads/main/ORE.lua")
 elseif game.PlaceId == 360589910 then
     executeScript("https://raw.githubusercontent.com/hellamane/favenlua/refs/heads/main/AH.lua")
+elseif game.PlaceId == 98848203219584 then
+	executeScript("https://raw.githubusercontent.com/hellamane/favenlua/refs/heads/main/CMI.lua")
 elseif game.PlaceId == 11708967881 then
     executeScript("https://raw.githubusercontent.com/hellamane/favenlua/refs/heads/main/YAF.lua")
 else
-
     local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
     local Frame = Instance.new("Frame", ScreenGui)
     local TextBox = Instance.new("TextBox", Frame)
@@ -78,12 +83,15 @@ else
             elseif input == "erx" or input == "eternal" or input == "eternal rarities x" then
                 ScreenGui:Destroy()
                 TeleportService:Teleport(116128963769069, LocalPlayer)
-            elseif input == "ore" or input == "ORE" or input == "ore mining" input == "ore mining incremental" or input == "ore incremental" then
+            elseif input == "ore" or input == "ore mining" or input == "ore mining incremental" or input == "ore incremental" then
                 ScreenGui:Destroy()
                 TeleportService:Teleport(83898177072058, LocalPlayer)
             elseif input == "ah" or input == "arab hoops" or input == "arab" or input == "hoops" then
                 ScreenGui:Destroy()
                 TeleportService:Teleport(360589910, LocalPlayer)
+			elseif input == "cube" or input == "cube market" or input == "cube market incremental" then
+                ScreenGui:Destroy()
+                TeleportService:Teleport(98848203219584, LocalPlayer)
             elseif input == "yaf" or input == "yeet" or input == "yeet a friend" or input == "yeeter" then
                 ScreenGui:Destroy()
                 TeleportService:Teleport(11708967881, LocalPlayer)
