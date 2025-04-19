@@ -96,7 +96,7 @@ else
                 ScreenGui:Destroy()
                 TeleportService:Teleport(11708967881, LocalPlayer)
             else
-                Notification.Text = "That script doesn't exist. Did you mean 'DLS', 'ERX', 'AH', 'ORE' or 'YAF'?"
+                Notification.Text = "That script doesn't exist. Did you mean 'DLS', 'ERX', 'AH', 'ORE', 'CMI' or 'YAF'?"
                 playDiscordSound()
                 wait(3)
                 Notification.Text = ""
