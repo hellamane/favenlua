@@ -1,3 +1,4 @@
+--// Dominus Lifting Simulator | Discord #steppin0nsteppas
 local modIDs = {
     1327199087, 3404114204, 417399445, 476757220, 17804357,
     432138635, 100509360, 28620140, 199822737
