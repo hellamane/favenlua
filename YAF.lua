@@ -1,4 +1,4 @@
---//Collect Stars "Yeet A Friend"
+--// Collect Stars "Yeet A Friend" | Discord #steppin0nsteppas
 
 getgenv().Star = false
 local VIP_BADGE_ID = 113712192
