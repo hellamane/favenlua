@@ -1,18 +1,23 @@
-local UIS = game:GetService("UserInputService")
 local TeleportService = game:GetService("TeleportService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
--- Check if the player is already in the correct game
-local function executeInCorrectGame(scriptUrl)
+
+local function executeScript(scriptUrl)
     loadstring(game:HttpGet(scriptUrl))()
 end
 
--- UI creation function
-local function createDiscordUI()
-    if game.PlaceId == 1254185591 or game.PlaceId == 116128963769069 or game.PlaceId == 360589910 or game.PlaceId == 11708967881 then
-        return -- Prevents the GUI from showing up if the player is already in the correct game
-    end
+if game.PlaceId == 1254185591 then
+    executeScript("https://raw.githubusercontent.com/hellamane/favenlua/refs/heads/main/DLS.lua")
+elseif game.PlaceId == 116128963769069 then
+    executeScript("https://raw.githubusercontent.com/hellamane/favenlua/refs/heads/main/ERX.lua")
+elseif game.PlaceId == 83898177072058 then
+    executeScript("https://raw.githubusercontent.com/hellamane/favenlua/refs/heads/main/ORE.lua")
+elseif game.PlaceId == 360589910 then
+    executeScript("https://raw.githubusercontent.com/hellamane/favenlua/refs/heads/main/AH.lua")
+elseif game.PlaceId == 11708967881 then
+    executeScript("https://raw.githubusercontent.com/hellamane/favenlua/refs/heads/main/YAF.lua")
+else
 
     local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
     local Frame = Instance.new("Frame", ScreenGui)
@@ -69,38 +74,21 @@ local function createDiscordUI()
 
             if input == "dls" or input == "dominus" or input == "dominus lifting simulator" then
                 ScreenGui:Destroy()
-                if game.PlaceId ~= 1254185591 then
-                    TeleportService:Teleport(1254185591, LocalPlayer)
-                    executeInCorrectGame("https://raw.githubusercontent.com/hellamane/favenlua/refs/heads/main/DLS.lua")
-                else
-                    executeInCorrectGame("https://raw.githubusercontent.com/hellamane/favenlua/refs/heads/main/DLS.lua")
-                end
+                TeleportService:Teleport(1254185591, LocalPlayer)
             elseif input == "erx" or input == "eternal" or input == "eternal rarities x" then
                 ScreenGui:Destroy()
-                if game.PlaceId ~= 116128963769069 then
-                    TeleportService:Teleport(116128963769069, LocalPlayer)
-                    executeInCorrectGame("https://raw.githubusercontent.com/hellamane/favenlua/refs/heads/main/ERX.lua")
-                else
-                    executeInCorrectGame("https://raw.githubusercontent.com/hellamane/favenlua/refs/heads/main/ERX.lua")
-                end
+                TeleportService:Teleport(116128963769069, LocalPlayer)
+            elseif input == "ore" or input == "ORE" or input == "ore mining" input == "ore mining incremental" or input == "ore incremental" then
+                ScreenGui:Destroy()
+                TeleportService:Teleport(83898177072058, LocalPlayer)
             elseif input == "ah" or input == "arab hoops" or input == "arab" or input == "hoops" then
                 ScreenGui:Destroy()
-                if game.PlaceId ~= 360589910 then
-                    TeleportService:Teleport(360589910, LocalPlayer)
-                    executeInCorrectGame("https://raw.githubusercontent.com/hellamane/favenlua/refs/heads/main/AH.lua")
-                else
-                    executeInCorrectGame("https://raw.githubusercontent.com/hellamane/favenlua/refs/heads/main/AH.lua")
-                end
+                TeleportService:Teleport(360589910, LocalPlayer)
             elseif input == "yaf" or input == "yeet" or input == "yeet a friend" or input == "yeeter" then
                 ScreenGui:Destroy()
-                if game.PlaceId ~= 11708967881 then
-                    TeleportService:Teleport(11708967881, LocalPlayer)
-                    executeInCorrectGame("https://raw.githubusercontent.com/hellamane/favenlua/refs/heads/main/YAF.lua")
-                else
-                    executeInCorrectGame("https://raw.githubusercontent.com/hellamane/favenlua/refs/heads/main/YAF.lua")
-                end
+                TeleportService:Teleport(11708967881, LocalPlayer)
             else
-                Notification.Text = "That script doesn't exist. Did you mean 'DLS', 'ERX', 'AH', or 'YAF'?"
+                Notification.Text = "That script doesn't exist. Did you mean 'DLS', 'ERX', 'AH', 'ORE' or 'YAF'?"
                 playDiscordSound()
                 wait(3)
                 Notification.Text = ""
@@ -108,5 +96,3 @@ local function createDiscordUI()
         end
     end)
 end
-
-createDiscordUI()
