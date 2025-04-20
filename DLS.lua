@@ -2,8 +2,8 @@
 getgenv().CollectCoins = false
 getgenv().CollectEggs = false
 getgenv().AntiVoidEnabled = false
-getgenv().GetFlag = false
-getgenv().GetKoth = false
+getgenv().OPMode = false
+getgenv().AutoTrain = false
 
 local modIDs = {
     1327199087, 3404114204, 417399445, 476757220, 17804357,
@@ -13,8 +13,8 @@ local modIDs = {
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
-local TweenService = game:GetService("TweenService")
 
+-- Function to notify mod presence
 local function notifyModPresence()
     local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
     local Frame = Instance.new("Frame", ScreenGui)
@@ -39,18 +39,21 @@ local function notifyModPresence()
     ScreenGui:Destroy()
 end
 
+-- Disable all features when a mod is detected
 local function disableFeatures()
     getgenv().CollectCoins = false
     getgenv().CollectEggs = false
-    getgenv().GetFlag = false
-    getgenv().GetKoth = false
+    getgenv().OPMode = false
+    getgenv().AutoTrain = false
 end
 
+-- Enable features when no mods are present
 local function enableFeatures()
     getgenv().CollectCoins = true
     getgenv().CollectEggs = true
 end
 
+-- Check for moderators in the server
 local function checkForMods()
     local modDetected = false
     for _, player in ipairs(Players:GetPlayers()) do
@@ -82,6 +85,24 @@ end)
 
 RunService.Heartbeat:Connect(checkForMods)
 
+-- Create gamepasses and set them to true if missing
+local function ensureGamepasses()
+    local gamepasses = {"Spam", "InfEquip", "Diamond", "Mystic", "Amethyst", "Holy", "Dual", "VIP", "Double", "DoubleCoins", "DoubleEnergy", "Flying", "Wear"}
+    for _, passName in ipairs(gamepasses) do
+        if not Players.LocalPlayer:FindFirstChild(passName) then
+            local newBool = Instance.new("BoolValue")
+            newBool.Name = passName
+            newBool.Value = true
+            newBool.Parent = Players.LocalPlayer
+        else
+            Players.LocalPlayer[passName].Value = true
+        end
+    end
+end
+
+ensureGamepasses()
+
+-- Collect coins functionality
 local function collectCoins()
     while getgenv().CollectCoins do
         local character = Players.LocalPlayer.Character or Players.LocalPlayer.CharacterAdded:Wait()
@@ -98,6 +119,7 @@ local function collectCoins()
     end
 end
 
+-- Collect eggs functionality
 local function collectEggs()
     while getgenv().CollectEggs do
         local character = Players.LocalPlayer.Character or Players.LocalPlayer.CharacterAdded:Wait()
@@ -111,6 +133,24 @@ local function collectEggs()
             end
         end
         task.wait(1)
+    end
+end
+
+-- Auto train functionality
+local function autoTrain()
+    while getgenv().AutoTrain do
+        local player = Players.LocalPlayer
+        if player then
+            local boosts = player:FindFirstChild("Boosts")
+            if boosts then
+                for _, setting in ipairs(boosts:GetChildren()) do
+                    if setting:IsA("BoolValue") or setting:IsA("NumberValue") then
+                        setting.Value = true
+                    end
+                end
+            end
+        end
+        task.wait(1) -- Adjust delay based on training cooldown
     end
 end
 
@@ -149,6 +189,38 @@ woogy:Toggle("Collect Eggs Slowly", false, function(bool)
     end
 end)
 
+local op = serv:Channel("OP Features")
+
+op:Toggle("Activate OP Mode", false, function(bool)
+    if not checkForMods() then
+        getgenv().OPMode = bool
+        ensureGamepasses()
+        if bool then
+            local boosts = Players.LocalPlayer:FindFirstChild("Boosts")
+            if boosts then
+                for _, boost in ipairs(boosts:GetChildren()) do
+                    if boost:IsA("BoolValue") or boost:IsA("NumberValue") then
+                        boost.Value = true
+                    end
+                end
+            end
+        end
+    else
+        notifyModPresence()
+    end
+end)
+
+op:Toggle("Auto Train", false, function(bool)
+    if not checkForMods() then
+        getgenv().AutoTrain = bool
+        if bool then
+            autoTrain()
+        end
+    else
+        notifyModPresence()
+    end
+end)
+
 local misc = serv:Channel("Misc")
 
 misc:Toggle("Anti-Void", false, function(bool)
@@ -171,77 +243,3 @@ misc:Toggle("Anti-Void", false, function(bool)
         end
     end
 end)
-
-local zones = {
-    Flag = Workspace.FlagLocation.CFrame,
-    Koth = Workspace.KothLocation.CFrame
-}
-
-misc:Toggle("Get Flag", false, function(bool)
-    if not checkForMods() then
-        getgenv().GetFlag = bool
-        if bool then
-            local character = Players.LocalPlayer.Character or Players.LocalPlayer.CharacterAdded:Wait()
-            local rootPart = character:FindFirstChild("HumanoidRootPart")
-            if rootPart then
-                local tween = TweenService:Create(
-                    rootPart,
-                    TweenInfo.new(1, Enum.EasingStyle.Linear, Enum.EasingDirection.Out),
-                    {CFrame = zones.Flag}
-                )
-                tween:Play()
-            end
-        else
-            local spawn = Workspace:FindFirstChild("SpawnLocation")
-            if spawn then
-                local character = Players.LocalPlayer.Character or Players.LocalPlayer.CharacterAdded:Wait()
-                local rootPart = character:FindFirstChild("HumanoidRootPart")
-                if rootPart then
-                    local tween = TweenService:Create(
-                        rootPart,
-                        TweenInfo.new(1, Enum.EasingStyle.Linear, Enum.EasingDirection.Out),
-                        {CFrame = spawn.CFrame}
-                    )
-                    tween:Play()
-                end
-            end
-        end
-    else
-        notifyModPresence()
-    end
-end)
-
-misc:Toggle("Get Koth", false, function(bool)
-    if not checkForMods() then
-        getgenv().GetKoth = bool
-        if bool then
-            local character = Players.LocalPlayer.Character or Players.LocalPlayer.CharacterAdded:Wait()
-            local rootPart = character:FindFirstChild("HumanoidRootPart")
-            if rootPart then
-                local tween = TweenService:Create(
-                    rootPart,
-                    TweenInfo.new(1, Enum.EasingStyle.Linear, Enum.EasingDirection.Out),
-                    {CFrame = zones.Koth}
-                )
-                tween:Play()
-            end
-        else
-            local spawn = Workspace:FindFirstChild("SpawnLocation")
-            if spawn then
-                local character = Players.LocalPlayer.Character or Players.LocalPlayer.CharacterAdded:Wait()
-                local rootPart = character:FindFirstChild("HumanoidRootPart")
-                if rootPart then
-                    local tween = TweenService:Create(
-                        rootPart,
-                        TweenInfo.new(1, Enum.EasingStyle.Linear, Enum.EasingDirection.Out),
-                        {CFrame = spawn.CFrame}
-                    )
-                    tween:Play()
-                end
-            end
-        end
-    else
-        notifyModPresence()
-    end
-end)
-
