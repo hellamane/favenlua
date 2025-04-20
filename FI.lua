@@ -100,16 +100,13 @@ aimstix:Toggle("Auto Fishing", false, function(bool)
 
                 local rod = workspace:FindFirstChild(game.Players.LocalPlayer.Name).Rod
                 if rod and rod:FindFirstChild("Handle") and rod.Handle:FindFirstChild("Float") then
-                    local alert = rod.Handle.Float:FindFirstChild("AAAFISH").Alert
-
                     repeat
                         UserInputService:SendMouseButtonEvent(0, 0, Enum.UserInputType.MouseButton1, true, game, nil) -- Left-click to cast
                         task.wait(0.5)
-                    until rod.Handle:FindFirstChild("Bait") -- Ensures the rod successfully casted
+                    until rod.Handle.Float and rod.Handle.Float:FindFirstChild("AAAFISH") and rod.Handle.Float.AAAFISH:FindFirstChild("You") and rod.Handle.Float.AAAFISH.Alert
 
-                    task.wait(2)
-
-                    if alert.TextLabel.Enabled then
+                    local alert = rod.Handle.Float.AAAFISH.Alert
+                    if alert and alert.TextLabel and alert.TextLabel.Enabled then
                         UserInputService:SendMouseButtonEvent(0, 0, Enum.UserInputType.MouseButton1, true, game, nil) -- Left-click to reel
                         task.wait(1)
                     end
