@@ -82,6 +82,38 @@ end)
 
 RunService.Heartbeat:Connect(checkForMods)
 
+local function collectCoins()
+    while getgenv().CollectCoins do
+        local character = Players.LocalPlayer.Character or Players.LocalPlayer.CharacterAdded:Wait()
+        local rootPart = character:WaitForChild("HumanoidRootPart")
+
+        for _, coin in pairs(Workspace.Coins:GetChildren()) do
+            if coin:IsA("MeshPart") and coin.Name == "Coin" then
+                firetouchinterest(coin, rootPart, 0)
+                task.wait(0.3)
+                firetouchinterest(coin, rootPart, 1)
+            end
+        end
+        task.wait(1)
+    end
+end
+
+local function collectEggs()
+    while getgenv().CollectEggs do
+        local character = Players.LocalPlayer.Character or Players.LocalPlayer.CharacterAdded:Wait()
+        local rootPart = character:WaitForChild("HumanoidRootPart")
+
+        for _, egg in pairs(Workspace.Coins:GetChildren()) do
+            if egg:IsA("MeshPart") and egg.Name == "Egg" then
+                firetouchinterest(egg, rootPart, 0)
+                task.wait(0.3)
+                firetouchinterest(egg, rootPart, 1)
+            end
+        end
+        task.wait(1)
+    end
+end
+
 local DiscordLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/UI-Libs/main/discord%20lib.txt"))()
 
 local win = DiscordLib:Window("Ferret Hub V2")
@@ -98,6 +130,9 @@ local woogy = serv:Channel("Autofarm")
 woogy:Toggle("Collect Coins Slowly", false, function(bool)
     if not checkForMods() then
         getgenv().CollectCoins = bool
+        if bool then
+            collectCoins()
+        end
     else
         notifyModPresence()
     end
@@ -106,6 +141,9 @@ end)
 woogy:Toggle("Collect Eggs Slowly", false, function(bool)
     if not checkForMods() then
         getgenv().CollectEggs = bool
+        if bool then
+            collectEggs()
+        end
     else
         notifyModPresence()
     end
@@ -206,3 +244,4 @@ misc:Toggle("Get Koth", false, function(bool)
         notifyModPresence()
     end
 end)
+
