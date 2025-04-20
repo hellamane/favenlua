@@ -19,6 +19,8 @@ elseif game.PlaceId == 83898177072058 then
     executeScript("https://raw.githubusercontent.com/hellamane/favenlua/refs/heads/main/ORE.lua")
 elseif game.PlaceId == 360589910 then
     executeScript("https://raw.githubusercontent.com/hellamane/favenlua/refs/heads/main/AH.lua")
+elseif game.PlaceId == 133439346139656 then
+	executeScript("https://raw.githubusercontent.com/hellamane/favenlua/refs/heads/main/FI.lua")
 elseif game.PlaceId == 98848203219584 then
 	executeScript("https://raw.githubusercontent.com/hellamane/favenlua/refs/heads/main/CMI.lua")
 elseif game.PlaceId == 11708967881 then
@@ -89,6 +91,9 @@ else
             elseif input == "ah" or input == "arab hoops" or input == "arab" or input == "hoops" then
                 ScreenGui:Destroy()
                 TeleportService:Teleport(360589910, LocalPlayer)
+			elseif input == "fi" or input == "fish" or input == "fish incremental" then
+                ScreenGui:Destroy()
+                TeleportService:Teleport(133439346139656, LocalPlayer)
 			elseif input == "cube" or input == "cube market" or input == "cube market incremental" then
                 ScreenGui:Destroy()
                 TeleportService:Teleport(98848203219584, LocalPlayer)
