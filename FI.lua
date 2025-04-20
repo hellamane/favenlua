@@ -1,7 +1,5 @@
 getgenv().Coins = false
 getgenv().AutoFishing = false
-getgenv().LuckBoost = false
-getgenv().AutoUpgrade = false
 
 local DiscordLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/UI-Libs/main/discord%20lib.txt"))()
 
@@ -39,10 +37,8 @@ aimstix:Toggle("Auto Fishing", false, function(bool)
     getgenv().AutoFishing = bool
 
     local ReplicatedStorage = game:GetService("ReplicatedStorage")
+    local UserInputService = game:GetService("UserInputService")
     local TweenService = game:GetService("TweenService")
-    local AAAFISH = ReplicatedStorage:WaitForChild("Rod"):WaitForChild("Handle"):WaitForChild("Float"):WaitForChild("AAAFISH")
-    local FishCatchedRemote = ReplicatedStorage.Remotes:WaitForChild("FishCatchedClient")
-    local PlayerCaughtFishRemote = ReplicatedStorage.Remotes:WaitForChild("PlayerCaughtFish")
 
     local function getClosestZone()
         local playerPosition = game.Players.LocalPlayer.Character.HumanoidRootPart.Position
@@ -92,18 +88,31 @@ aimstix:Toggle("Auto Fishing", false, function(bool)
                 local player = game.Players.LocalPlayer.Character
                 local rootPart = player:WaitForChild("HumanoidRootPart")
 
-                local tween = TweenService:Create(
-                    rootPart,
-                    TweenInfo.new(0.5, Enum.EasingStyle.Linear, Enum.EasingDirection.Out),
-                    {CFrame = closestZone.CFrame}
-                )
-                tween:Play()
-                tween.Completed:Wait()
+                if (rootPart.Position - closestZone.Position).Magnitude > 5 then
+                    local tween = TweenService:Create(
+                        rootPart,
+                        TweenInfo.new(0.5, Enum.EasingStyle.Linear, Enum.EasingDirection.Out),
+                        {CFrame = closestZone.CFrame}
+                    )
+                    tween:Play()
+                    tween.Completed:Wait()
+                end
 
-                if AAAFISH:GetAttribute("CanCatch") then
-                    FishCatchedRemote:FireServer()
-                    PlayerCaughtFishRemote:FireServer()
-                    task.wait(1)
+                local rod = workspace:FindFirstChild(game.Players.LocalPlayer.Name).Rod
+                if rod and rod:FindFirstChild("Handle") and rod.Handle:FindFirstChild("Float") then
+                    local alert = rod.Handle.Float:FindFirstChild("AAAFISH").Alert
+
+                    repeat
+                        UserInputService:SendMouseButtonEvent(0, 0, Enum.UserInputType.MouseButton1, true, game, nil) -- Left-click to cast
+                        task.wait(0.5)
+                    until rod.Handle:FindFirstChild("Bait") -- Ensures the rod successfully casted
+
+                    task.wait(2)
+
+                    if alert.TextLabel.Enabled then
+                        UserInputService:SendMouseButtonEvent(0, 0, Enum.UserInputType.MouseButton1, true, game, nil) -- Left-click to reel
+                        task.wait(1)
+                    end
                 end
             end
             task.wait(0.1)
@@ -112,64 +121,5 @@ aimstix:Toggle("Auto Fishing", false, function(bool)
 
     if getgenv().AutoFishing then
         task.spawn(autoFish)
-    end
-end)
-
-aimstix:Toggle("Luck Boost", false, function(bool)
-    getgenv().LuckBoost = bool
-
-    local ReplicatedStorage = game:GetService("ReplicatedStorage")
-    local FishesInfo = require(ReplicatedStorage.Fishes.FishesInfo)
-
-    local function applyLuckBoost()
-        if getgenv().LuckBoost then
-            for _, fishData in pairs(FishesInfo.ByName) do
-                if fishData.Rarity and fishData.Rarity > 1 then
-                    fishData.Rarity = fishData.Rarity / 100
-                end
-            end
-        else
-            for _, fishData in pairs(FishesInfo.ByName) do
-                if fishData.Rarity and fishData.Rarity > 1 then
-                    fishData.Rarity = fishData.Rarity * 100
-                end
-            end
-        end
-    end
-
-    if getgenv().LuckBoost then
-        task.spawn(applyLuckBoost)
-    end
-end)
-
-aimstix:Toggle("Auto Upgrade", false, function(bool)
-    getgenv().AutoUpgrade = bool
-
-    local ReplicatedStorage = game:GetService("ReplicatedStorage")
-    local BuyUpgradeRemote = ReplicatedStorage.Remotes:WaitForChild("BuyUpgrade")
-    local BuyGeneratorRemote = ReplicatedStorage.Remotes:WaitForChild("BuyGenerator")
-    local BuyNewIslandRemote = ReplicatedStorage.Remotes:WaitForChild("BuyNewIsland")
-
-    local function autoUpgrade()
-        while getgenv().AutoUpgrade do
-            BuyUpgradeRemote:FireServer()
-            BuyGeneratorRemote:FireServer()
-            BuyNewIslandRemote:FireServer()
-            task.wait(1)
-        end
-    end
-
-    if getgenv().AutoUpgrade then
-        task.spawn(autoUpgrade)
-    end
-end)
-
-aimstix:Button("Get Gamepasses", function()
-    local ReplicatedStorage = game:GetService("ReplicatedStorage")
-    local UpdateBoughtPassesRemote = ReplicatedStorage.Remotes:WaitForChild("UpdateBoughtPassesInfo")
-    local GamepassesModule = require(ReplicatedStorage:WaitForChild("Gamepasses"))
-
-    for _, gamepassData in pairs(GamepassesModule.Gamepasses) do
-        UpdateBoughtPassesRemote:FireServer(gamepassData[1], true)
     end
 end)
