@@ -1,6 +1,3 @@
-local RunService = game:GetService("RunService")
-
-
 local DiscordLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/UI-Libs/main/discord%20lib.txt"))()
 
 local win = DiscordLib:Window("Ferret Hub V2")
@@ -12,49 +9,49 @@ lbls:Seperator()
 lbls:Label("Welcome to Ferret Hub!")
 lbls:Seperator()
 
-local woogy = serv:Channel("Autofarm")
+local farm = serv:Channel("Autofarm")
 
-woogy:Toggle("Collect Coins Slowly", false, function(bool)
+farm:Toggle("Collect Coins (Slow)", false, function(bool)
     if not checkForMods() then
-        getgenv().CollectCoins = bool
+        getgenv().CollectCoinsSlow = bool
         if bool then
-            collectCoins()
+            collectCoins(0.4)
         end
     else
-        warn("Moderators detected! Cannot start collecting coins.")
+        warn("Moderators detected! Cannot collect coins.")
     end
 end)
 
-woogy:Toggle("Collect Coins Stealthier", false, function(bool)
+farm:Toggle("Collect Coins (Slower)", false, function(bool)
     if not checkForMods() then
-        getgenv().CollectCoinsStealthier = bool
+        getgenv().CollectCoinsSlower = bool
         if bool then
-            collectCoinsStealthier()
+            collectCoins(0.6)
         end
     else
-        warn("Moderators detected! Cannot start collecting coins stealthily.")
+        warn("Moderators detected! Cannot collect coins.")
     end
 end)
 
-woogy:Toggle("Collect Eggs Slowly", false, function(bool)
+farm:Toggle("Collect Eggs (Slow)", false, function(bool)
     if not checkForMods() then
-        getgenv().CollectEggs = bool
+        getgenv().CollectEggsSlow = bool
         if bool then
-            collectEggs()
+            collectEggs(0.4)
         end
     else
-        warn("Moderators detected! Cannot start collecting eggs.")
+        warn("Moderators detected! Cannot collect eggs.")
     end
 end)
 
-woogy:Toggle("Collect Eggs Stealthier", false, function(bool)
+farm:Toggle("Collect Eggs (Slower)", false, function(bool)
     if not checkForMods() then
-        getgenv().CollectEggsStealthier = bool
+        getgenv().CollectEggsSlower = bool
         if bool then
-            collectEggsStealthier()
+            collectEggs(0.6)
         end
     else
-        warn("Moderators detected! Cannot start collecting eggs stealthily.")
+        warn("Moderators detected! Cannot collect eggs.")
     end
 end)
 
@@ -63,22 +60,11 @@ local op = serv:Channel("OP Features")
 op:Toggle("Activate OP Mode", false, function(bool)
     if not checkForMods() then
         getgenv().OPMode = bool
-        ensureGamepasses()
-        ensureTierData()
-        ensureBoosts()
-    else
-        warn("Moderators detected! Cannot activate OP Mode.")
-    end
-end)
-
-op:Toggle("Auto Train", false, function(bool)
-    if not checkForMods() then
-        getgenv().AutoTrain = bool
         if bool then
-            autoTrain()
+            activateOPMode()
         end
     else
-        warn("Moderators detected! Cannot enable Auto Train.")
+        warn("Moderators detected! Cannot activate OP Mode.")
     end
 end)
 
@@ -90,19 +76,25 @@ op:Button("Boosts", function()
     end
 end)
 
+op:Button("Gamepasses", function()
+    if not checkForMods() then
+        ensureGamepasses()
+    else
+        warn("Moderators detected! Cannot apply gamepasses.")
+    end
+end)
+
 local misc = serv:Channel("Misc")
 
 misc:Toggle("Anti-Void", false, function(bool)
     if not checkForMods() then
         getgenv().AntiVoidEnabled = bool
         if bool then
-            RunService.Heartbeat:Connect(function()
-                local character = Players.LocalPlayer.Character or Players.LocalPlayer.CharacterAdded:Wait()
-                local rootPart = character:FindFirstChild("HumanoidRootPart")
-                if rootPart and rootPart.Position.Y < -50 then
-                    local spawn = Workspace:FindFirstChild("SpawnLocation")
-                    if spawn then
-                        rootPart.CFrame = spawn.CFrame
+            getgenv().AntiVoidConnection = RunService.Heartbeat:Connect(function()
+                local character = Players.LocalPlayer.Character
+                if character and character:FindFirstChild("HumanoidRootPart") then
+                    if character.HumanoidRootPart.Position.Y < -50 then
+                        character.HumanoidRootPart.CFrame = Workspace.SpawnLocation.CFrame
                     end
                 end
             end)
@@ -119,33 +111,12 @@ end)
 
 misc:Button("FPS Boost", function()
     if not checkForMods() then
-        settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
-        Workspace.DescendantAdded:Connect(function(descendant)
-            if descendant:IsA("ParticleEmitter") or descendant:IsA("Trail") then
-                descendant:Destroy()
-            end
-        end)
-        for _, v in pairs(Workspace:GetDescendants()) do
-            if v:IsA("ParticleEmitter") or v:IsA("Trail") then
-                v:Destroy()
-            elseif v:IsA("BasePart") then
-                v.Material = Enum.Material.SmoothPlastic
-                v.Reflectance = 0
-                v.CastShadow = false
-            end
-        end
-
-        local settings = Players.LocalPlayer:FindFirstChild("Settings")
-        if settings then
-            local boolValues = {
-                settings:FindFirstChild("HideOtherPets"),
-                settings:FindFirstChild("HideRebirthPopup"),
-                settings:FindFirstChild("HideYourPets"),
-            }
-            for _, boolValue in pairs(boolValues) do
-                if boolValue and boolValue:IsA("BoolValue") then
-                    boolValue.Value = true
-                end
+        settings().Rendering.QualityLevel = 1
+        for _, obj in ipairs(Workspace:GetDescendants()) do
+            if obj:IsA("ParticleEmitter") or obj:IsA("Trail") then
+                obj:Destroy()
+            elseif obj:IsA("BasePart") then
+                obj.Material = Enum.Material.SmoothPlastic
             end
         end
     else
@@ -164,19 +135,19 @@ local function checkForMods()
     return modDetected
 end
 
-local function collectCoins()
-    while getgenv().CollectCoins do
+local function collectCoins(delay)
+    while getgenv().CollectCoinsSlow or getgenv().CollectCoinsSlower do
         if checkForMods() then
-            warn("Stopped collecting coins due to moderators.")
-            getgenv().CollectCoins = false
+            getgenv().CollectCoinsSlow = false
+            getgenv().CollectCoinsSlower = false
             break
         end
         local character = Players.LocalPlayer.Character or Players.LocalPlayer.CharacterAdded:Wait()
         local rootPart = character:WaitForChild("HumanoidRootPart")
-        for _, coin in pairs(Workspace.Coins:GetChildren()) do
-            if coin:IsA("MeshPart") and coin.Name == "Coin" then
+        for _, coin in pairs(Workspace:FindFirstChild("Coins"):GetChildren()) do
+            if coin:IsA("BasePart") then
                 firetouchinterest(coin, rootPart, 0)
-                task.wait(0.3)
+                task.wait(delay)
                 firetouchinterest(coin, rootPart, 1)
             end
         end
@@ -184,39 +155,62 @@ local function collectCoins()
     end
 end
 
-local function collectCoinsStealthier()
-    while getgenv().CollectCoinsStealthier do
+local function collectEggs(delay)
+    while getgenv().CollectEggsSlow or getgenv().CollectEggsSlower do
         if checkForMods() then
-            warn("Stopped collecting coins stealthily due to moderators.")
-            getgenv().CollectCoinsStealthier = false
+            getgenv().CollectEggsSlow = false
+            getgenv().CollectEggsSlower = false
             break
         end
         local character = Players.LocalPlayer.Character or Players.LocalPlayer.CharacterAdded:Wait()
         local rootPart = character:WaitForChild("HumanoidRootPart")
-        for _, coin in pairs(Workspace.Coins:GetChildren()) do
-            if coin:IsA("MeshPart") and coin.Name == "Coin" then
-                firetouchinterest(coin, rootPart, 0)
-                task.wait(0.6)
-                firetouchinterest(coin, rootPart, 1)
+        for _, egg in pairs(Workspace:FindFirstChild("Eggs"):GetChildren()) do
+            if egg:IsA("BasePart") then
+                firetouchinterest(egg, rootPart, 0)
+                task.wait(delay)
+                firetouchinterest(egg, rootPart, 1)
             end
         end
-        task.wait(2)
+        task.wait(1)
+    end
+end
+
+local function ensureGamepasses()
+    local gamepasses = {
+        "Spam", "Dual", "VIP", "Double", "DoubleCoins",
+        "DoubleEnergy", "Flying", "Wear", "AutoRebirth",
+        "DecaStrength", "DoubleTokens", "DoubleXP", 
+        "QuadCoins", "QuadStrength", "TripleHatch"
+    }
+
+    for _, gamepassName in ipairs(gamepasses) do
+        if not Players.LocalPlayer:FindFirstChild(gamepassName) then
+            local newGamepass = Instance.new("BoolValue")
+            newGamepass.Name = gamepassName
+            newGamepass.Value = true
+            newGamepass.Parent = Players.LocalPlayer
+        else
+
+            Players.LocalPlayer[gamepassName].Value = true
+        end
     end
 end
 
 local function ensureBoosts()
-    local boosts = {
-        "AutoRebirth", "AutoTrain", "DecaStrength", "DoubleCoins",
-        "DoubleTokens", "DoubleXP", "QuadCoins", "QuadStrength", "TripleHatch"
-    }
-    for _, boostName in ipairs(boosts) do
-        if not Players.LocalPlayer.Boosts:FindFirstChild(boostName) then
-            local newNumber = Instance.new("NumberValue")
-            newNumber.Name = boostName
-            newNumber.Value = 1000
-            newNumber.Parent = Players.LocalPlayer.Boosts
+    for _, boostName in ipairs(OP_FEATURES.Boosts) do
+        local boost = Players.LocalPlayer.Boosts:FindFirstChild(boostName)
+        if not boost then
+            boost = Instance.new("NumberValue")
+            boost.Name = boostName
+            boost.Value = 1000
+            boost.Parent = Players.LocalPlayer.Boosts
         else
-            Players.LocalPlayer.Boosts[boostName].Value = 1000
+            boost.Value = 1000
         end
     end
+end
+
+local function activateOPMode()
+    ensureGamepasses()
+    ensureBoosts()
 end
