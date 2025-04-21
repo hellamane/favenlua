@@ -185,34 +185,18 @@ end)
 opFeatures:Button("Gamepasses", function()
     if not checkForMods() then ensureGamepasses() end
 end)
-opFeatures:Dropdown("Pick Rebirth Amount", 
-    {"1","5","10","30","50","100","500","750","1000","2500","5000","20000","50000","75000","100000"}, 
-    function(value)
-        local num = tonumber(value)
-        if num then
-            local player = Players.LocalPlayer
-            local playerData = player:FindFirstChild("PlayerData")
-            if not playerData then
-                playerData = Instance.new("Folder")
-                playerData.Name = "PlayerData"
-                playerData.Parent = player
-            end
-            local autoRebirthConfig = playerData:FindFirstChild("AutoRebirthConfig")
-            if not autoRebirthConfig then
-                autoRebirthConfig = Instance.new("Folder")
-                autoRebirthConfig.Name = "AutoRebirthConfig"
-                autoRebirthConfig.Parent = playerData
-            end
+opFeatures:Dropdown("Pick Rebirth Amount", {"1", "5", "10", "30", "50", "100", "500", "750", "1000", "2500", "5000", "20000", "50000", "75000", "100000"}, function(value)
+    local num = tonumber(value)
+    if num then
+        local autoRebirthConfig = Players.LocalPlayer:FindFirstChild("PlayerData") and Players.LocalPlayer.PlayerData:FindFirstChild("AutoRebirthConfig")
+        if autoRebirthConfig then
             local autoAmount = autoRebirthConfig:FindFirstChild("AutoAmount")
-            if not autoAmount then
-                autoAmount = Instance.new("IntValue")
-                autoAmount.Name = "AutoAmount"
-                autoAmount.Parent = autoRebirthConfig
+            if autoAmount then
+                autoAmount.Value = num
             end
-            autoAmount.Value = num
         end
     end
-)
+end)
 
 local misc = serv:Channel("Misc")
 misc:Toggle("Anti-Void", false, function(bool)
