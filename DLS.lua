@@ -1,3 +1,5 @@
+--// DLS | Discord steppin0nsteppas
+-- FAQ: How to use Auto Rebirth | Enable Auto OP
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
