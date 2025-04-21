@@ -179,12 +179,15 @@ opFeatures:Toggle("Activate OP Mode", false, function(bool)
         if bool then activateOPMode() end
     end
 end)
+
 opFeatures:Button("Boosts", function()
     if not checkForMods() then ensureBoosts() end
 end)
+
 opFeatures:Button("Gamepasses", function()
     if not checkForMods() then ensureGamepasses() end
 end)
+
 opFeatures:Dropdown("Pick Rebirth Amount", {"1", "5", "10", "30", "50", "100", "500", "750", "1000", "2500", "5000", "20000", "50000", "75000", "100000"}, function(value)
     local num = tonumber(value)
     if num then
@@ -212,6 +215,7 @@ misc:Toggle("Anti-Void", false, function(bool)
         end
     end
 end)
+
 misc:Button("FPS Boost", function()
     local settings_ = Players.LocalPlayer:FindFirstChild("Settings")
     if settings_ then
