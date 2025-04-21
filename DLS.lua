@@ -1,15 +1,11 @@
--- Part 0: Services and modIDs
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local modIDs = {
-    1327199087, 3404114204, 417399445, 476757220, 17804357,
-    432138635, 100509360, 28620140, 199822737
-}
+local modIDs = {1327199087, 3404114204, 417399445, 476757220, 17804357, 432138635, 100509360, 28620140, 199822737}
 
--- Part 1: DiscordLib UI Setup
 local DiscordLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/UI-Libs/main/discord%20lib.txt"))()
 local win = DiscordLib:Window("Ferret Hub V2")
 local serv = win:Server("Home", "")
@@ -20,7 +16,6 @@ info:Seperator()
 info:Label("Welcome to Ferret Hub!")
 info:Seperator()
 
--- Part 2: Function Definitions
 local function checkForMods()
     local modDetected = false
     for _, player in ipairs(Players:GetPlayers()) do
@@ -32,6 +27,32 @@ local function checkForMods()
     return modDetected
 end
 
+local function createModNotification()
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "ModWarning"
+    screenGui.ResetOnSpawn = false
+
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(0, 200, 0, 50)
+    frame.Position = UDim2.new(0.5, -100, 1, -60)
+    frame.BackgroundColor3 = Color3.fromRGB(128, 128, 128)
+    frame.BorderSizePixel = 0
+
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, 0, 1, 0)
+    label.Text = "Owner/Mod in server (You should go)"
+    label.BackgroundTransparency = 1
+    label.TextColor3 = Color3.new(1, 1, 1)
+    label.Font = Enum.Font.SourceSansBold
+    label.TextScaled = true
+
+    label.Parent = frame
+    frame.Parent = screenGui
+    screenGui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
+    
+    return screenGui
+end
+
 local function collectItems(itemName, delay)
     while getgenv().CollectCoinsSlow or getgenv().CollectCoinsSlower or getgenv().CollectEggsSlow or getgenv().CollectEggsSlower do
         if checkForMods() then
@@ -41,15 +62,15 @@ local function collectItems(itemName, delay)
             getgenv().CollectEggsSlower = false
             break
         end
-        local character = Players.LocalPlayer.Character or Players.LocalPlayer.CharacterAdded:Wait()
-        local rootPart = character:WaitForChild("HumanoidRootPart")
+        local char = Players.LocalPlayer.Character or Players.LocalPlayer.CharacterAdded:Wait()
+        local root = char:WaitForChild("HumanoidRootPart")
         local coinsFolder = Workspace:FindFirstChild("Coins")
         if coinsFolder then
             for _, item in ipairs(coinsFolder:GetChildren()) do
                 if item:IsA("MeshPart") and item.Name:lower() == itemName:lower() then
-                    firetouchinterest(item, rootPart, 0)
+                    firetouchinterest(item, root, 0)
                     task.wait(delay)
-                    firetouchinterest(item, rootPart, 1)
+                    firetouchinterest(item, root, 1)
                 end
             end
         end
@@ -57,13 +78,30 @@ local function collectItems(itemName, delay)
     end
 end
 
+local function getRewards()
+    while getgenv().GetRewards do
+        if checkForMods() then
+            getgenv().GetRewards = false
+            break
+        end
+        local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+        if remotes then
+            if remotes:FindFirstChild("QuestReward") then
+                remotes.QuestReward:FireServer()
+            end
+            if remotes:FindFirstChild("ChestReward") then
+                remotes.ChestReward:FireServer()
+            end
+            if remotes:FindFirstChild("ActivateGift") then
+                remotes.ActivateGift:FireServer()
+            end
+        end
+        task.wait(5)
+    end
+end
+
 local function ensureGamepasses()
-    local gamepasses = {
-        "Spam", "Dual", "Double", "DoubleCoins",
-        "DoubleEnergy", "Flying", "Wear", "AutoRebirth",
-        "DecaStrength", "DoubleTokens", "DoubleXP", 
-        "QuadCoins", "QuadStrength", "TripleHatch"
-    }
+    local gamepasses = {"Spam", "Dual", "Double", "DoubleCoins", "DoubleEnergy", "Flying", "Wear", "AutoRebirth", "DecaStrength", "DoubleTokens", "DoubleXP", "QuadCoins", "QuadStrength", "TripleHatch"}
     for _, gp in ipairs(gamepasses) do
         if not Players.LocalPlayer:FindFirstChild(gp) then
             local newGP = Instance.new("BoolValue")
@@ -77,10 +115,7 @@ local function ensureGamepasses()
 end
 
 local function ensureBoosts()
-    local boosts = {
-        "AutoRebirth", "AutoTrain", "DecaStrength", "DoubleCoins",
-        "DoubleTokens", "DoubleXP", "QuadCoins", "QuadStrength", "TripleHatch"
-    }
+    local boosts = {"AutoRebirth", "AutoTrain", "DecaStrength", "DoubleCoins", "DoubleTokens", "DoubleXP", "QuadCoins", "QuadStrength", "TripleHatch"}
     local boostsFolder = Players.LocalPlayer:FindFirstChild("Boosts")
     if not boostsFolder then
         boostsFolder = Instance.new("Folder")
@@ -120,9 +155,9 @@ local function activateOPMode()
 end
 
 local function antiVoidFunction()
-    local character = Players.LocalPlayer.Character
-    if character then
-        local root = character:FindFirstChild("HumanoidRootPart")
+    local char = Players.LocalPlayer.Character
+    if char then
+        local root = char:FindFirstChild("HumanoidRootPart")
         if root and root.Position.Y < -50 then
             local spawn = Workspace:FindFirstChild("SpawnLocation")
             if spawn then
@@ -134,6 +169,7 @@ local function antiVoidFunction()
 end
 
 -- Part 3: UI Toggles and Buttons
+
 local autofarm = serv:Channel("Autofarm")
 autofarm:Toggle("Collect Coins (Slow)", false, function(bool)
     if not checkForMods() then
@@ -159,6 +195,12 @@ autofarm:Toggle("Collect Eggs (Slower)", false, function(bool)
         if bool then task.spawn(function() collectItems("egg", 0.6) end) end
     end
 end)
+autofarm:Toggle("Get Rewards", false, function(bool)
+    if not checkForMods() then
+        getgenv().GetRewards = bool
+        if bool then task.spawn(function() getRewards() end) end
+    end
+end)
 
 local opFeatures = serv:Channel("OP Features")
 opFeatures:Toggle("Activate OP Mode", false, function(bool)
@@ -172,6 +214,18 @@ opFeatures:Button("Boosts", function()
 end)
 opFeatures:Button("Gamepasses", function()
     if not checkForMods() then ensureGamepasses() end
+end)
+opFeatures:Dropdown("Pick Rebirth Amount", {"1","5","10","30","50","100","500","750","1000","2500","5000","20000","50000","75000","100000"}, function(value)
+    local num = tonumber(value)
+    if num then
+        local autoRebirthConfig = Players.LocalPlayer:FindFirstChild("PlayerData") and Players.LocalPlayer.PlayerData:FindFirstChild("AutoRebirthConfig")
+        if autoRebirthConfig then
+            local autoAmount = autoRebirthConfig:FindFirstChild("AutoAmount")
+            if autoAmount then
+                autoAmount.Value = num
+            end
+        end
+    end
 end)
 
 local misc = serv:Channel("Misc")
@@ -189,14 +243,35 @@ misc:Toggle("Anti-Void", false, function(bool)
     end
 end)
 misc:Button("FPS Boost", function()
-    if not checkForMods() then
-        settings().Rendering.QualityLevel = 1
-        for _, obj in ipairs(Workspace:GetDescendants()) do
-            if obj:IsA("ParticleEmitter") or obj:IsA("Trail") then
-                obj:Destroy()
-            elseif obj:IsA("BasePart") then
-                obj.Material = Enum.Material.SmoothPlastic
+    local settings_ = Players.LocalPlayer:FindFirstChild("Settings")
+    if settings_ then
+        local offList = {"Particles", "RebirthSFX", "StrengthPopup", "Minigames"}
+        for _, sName in ipairs(offList) do
+            local s = settings_:FindFirstChild(sName)
+            if s and s:IsA("BoolValue") then
+                s.Value = false
             end
+        end
+        local onList = {"HideYourPets", "HideRebirthPopup", "HideOtherPets"}
+        for _, sName in ipairs(onList) do
+            local s = settings_:FindFirstChild(sName)
+            if s and s:IsA("BoolValue") then
+                s.Value = true
+            end
+        end
+    end
+end)
+
+local modNotification
+RunService.Heartbeat:Connect(function()
+    if checkForMods() then
+        if not modNotification then
+            modNotification = createModNotification()
+        end
+    else
+        if modNotification then
+            modNotification:Destroy()
+            modNotification = nil
         end
     end
 end)
