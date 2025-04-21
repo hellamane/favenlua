@@ -15,7 +15,7 @@ farm:Toggle("Collect Coins (Slow)", false, function(bool)
     if not checkForMods() then
         getgenv().CollectCoinsSlow = bool
         if bool then
-            collectCoins(0.4)
+            collectCoins("coin", 0.4)
         end
     else
         warn("Moderators detected! Cannot collect coins.")
@@ -26,7 +26,7 @@ farm:Toggle("Collect Coins (Slower)", false, function(bool)
     if not checkForMods() then
         getgenv().CollectCoinsSlower = bool
         if bool then
-            collectCoins(0.6)
+            collectCoins("coin", 0.6)
         end
     else
         warn("Moderators detected! Cannot collect coins.")
@@ -37,7 +37,7 @@ farm:Toggle("Collect Eggs (Slow)", false, function(bool)
     if not checkForMods() then
         getgenv().CollectEggsSlow = bool
         if bool then
-            collectEggs(0.4)
+            collectEggs("egg", 0.4)
         end
     else
         warn("Moderators detected! Cannot collect eggs.")
@@ -48,7 +48,7 @@ farm:Toggle("Collect Eggs (Slower)", false, function(bool)
     if not checkForMods() then
         getgenv().CollectEggsSlower = bool
         if bool then
-            collectEggs(0.6)
+            collectEggs("egg", 0.6)
         end
     else
         warn("Moderators detected! Cannot collect eggs.")
@@ -135,7 +135,7 @@ local function checkForMods()
     return modDetected
 end
 
-local function collectCoins(delay)
+local function collectCoins(itemName, delay)
     while getgenv().CollectCoinsSlow or getgenv().CollectCoinsSlower do
         if checkForMods() then
             getgenv().CollectCoinsSlow = false
@@ -144,18 +144,18 @@ local function collectCoins(delay)
         end
         local character = Players.LocalPlayer.Character or Players.LocalPlayer.CharacterAdded:Wait()
         local rootPart = character:WaitForChild("HumanoidRootPart")
-        for _, coin in pairs(Workspace:FindFirstChild("Coins"):GetChildren()) do
-            if coin:IsA("BasePart") then
-                firetouchinterest(coin, rootPart, 0)
+        for _, item in pairs(Workspace.Coins:GetChildren()) do
+            if item.Name:lower() == itemName:lower() then
+                firetouchinterest(item, rootPart, 0)
                 task.wait(delay)
-                firetouchinterest(coin, rootPart, 1)
+                firetouchinterest(item, rootPart, 1)
             end
         end
         task.wait(1)
     end
 end
 
-local function collectEggs(delay)
+local function collectEggs(itemName, delay)
     while getgenv().CollectEggsSlow or getgenv().CollectEggsSlower do
         if checkForMods() then
             getgenv().CollectEggsSlow = false
@@ -164,11 +164,11 @@ local function collectEggs(delay)
         end
         local character = Players.LocalPlayer.Character or Players.LocalPlayer.CharacterAdded:Wait()
         local rootPart = character:WaitForChild("HumanoidRootPart")
-        for _, egg in pairs(Workspace:FindFirstChild("Eggs"):GetChildren()) do
-            if egg:IsA("BasePart") then
-                firetouchinterest(egg, rootPart, 0)
+        for _, item in pairs(Workspace.Coins:GetChildren()) do
+            if item.Name:lower() == itemName:lower() then
+                firetouchinterest(item, rootPart, 0)
                 task.wait(delay)
-                firetouchinterest(egg, rootPart, 1)
+                firetouchinterest(item, rootPart, 1)
             end
         end
         task.wait(1)
@@ -182,7 +182,6 @@ local function ensureGamepasses()
         "DecaStrength", "DoubleTokens", "DoubleXP", 
         "QuadCoins", "QuadStrength", "TripleHatch"
     }
-
     for _, gamepassName in ipairs(gamepasses) do
         if not Players.LocalPlayer:FindFirstChild(gamepassName) then
             local newGamepass = Instance.new("BoolValue")
@@ -190,14 +189,17 @@ local function ensureGamepasses()
             newGamepass.Value = true
             newGamepass.Parent = Players.LocalPlayer
         else
-
             Players.LocalPlayer[gamepassName].Value = true
         end
     end
 end
 
 local function ensureBoosts()
-    for _, boostName in ipairs(OP_FEATURES.Boosts) do
+    local boosts = {
+        "AutoRebirth", "AutoTrain", "DecaStrength", "DoubleCoins",
+        "DoubleTokens", "DoubleXP", "QuadCoins", "QuadStrength", "TripleHatch"
+    }
+    for _, boostName in ipairs(boosts) do
         local boost = Players.LocalPlayer.Boosts:FindFirstChild(boostName)
         if not boost then
             boost = Instance.new("NumberValue")
@@ -213,4 +215,14 @@ end
 local function activateOPMode()
     ensureGamepasses()
     ensureBoosts()
+    for _, tier in ipairs({"Basic", "Cool", "Legend"}) do
+        local tierData = Players.LocalPlayer.TierData:FindFirstChild(tier)
+        if tierData then
+            tierData.Active.Value = true
+        end
+    end
+    local autoRebirth = Players.LocalPlayer.Settings:FindFirstChild("AutoRebirth")
+    if autoRebirth then
+        autoRebirth.Value = true
+    end
 end
