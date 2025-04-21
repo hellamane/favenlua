@@ -15,10 +15,8 @@ farm:Toggle("Collect Coins (Slow)", false, function(bool)
     if not checkForMods() then
         getgenv().CollectCoinsSlow = bool
         if bool then
-            collectCoins("coin", 0.4)
+            collectItems("coin", 0.4)
         end
-    else
-        warn("Moderators detected! Cannot collect coins.")
     end
 end)
 
@@ -26,10 +24,8 @@ farm:Toggle("Collect Coins (Slower)", false, function(bool)
     if not checkForMods() then
         getgenv().CollectCoinsSlower = bool
         if bool then
-            collectCoins("coin", 0.6)
+            collectItems("coin", 0.6)
         end
-    else
-        warn("Moderators detected! Cannot collect coins.")
     end
 end)
 
@@ -37,10 +33,8 @@ farm:Toggle("Collect Eggs (Slow)", false, function(bool)
     if not checkForMods() then
         getgenv().CollectEggsSlow = bool
         if bool then
-            collectEggs("egg", 0.4)
+            collectItems("egg", 0.4)
         end
-    else
-        warn("Moderators detected! Cannot collect eggs.")
     end
 end)
 
@@ -48,10 +42,8 @@ farm:Toggle("Collect Eggs (Slower)", false, function(bool)
     if not checkForMods() then
         getgenv().CollectEggsSlower = bool
         if bool then
-            collectEggs("egg", 0.6)
+            collectItems("egg", 0.6)
         end
-    else
-        warn("Moderators detected! Cannot collect eggs.")
     end
 end)
 
@@ -63,24 +55,18 @@ op:Toggle("Activate OP Mode", false, function(bool)
         if bool then
             activateOPMode()
         end
-    else
-        warn("Moderators detected! Cannot activate OP Mode.")
     end
 end)
 
 op:Button("Boosts", function()
     if not checkForMods() then
         ensureBoosts()
-    else
-        warn("Moderators detected! Cannot apply boosts.")
     end
 end)
 
 op:Button("Gamepasses", function()
     if not checkForMods() then
         ensureGamepasses()
-    else
-        warn("Moderators detected! Cannot apply gamepasses.")
     end
 end)
 
@@ -104,8 +90,6 @@ misc:Toggle("Anti-Void", false, function(bool)
                 getgenv().AntiVoidConnection = nil
             end
         end
-    else
-        warn("Moderators detected! Cannot enable Anti-Void.")
     end
 end)
 
@@ -119,8 +103,6 @@ misc:Button("FPS Boost", function()
                 obj.Material = Enum.Material.SmoothPlastic
             end
         end
-    else
-        warn("Moderators detected! Cannot apply FPS Boost.")
     end
 end)
 
@@ -135,29 +117,11 @@ local function checkForMods()
     return modDetected
 end
 
-local function collectCoins(itemName, delay)
-    while getgenv().CollectCoinsSlow or getgenv().CollectCoinsSlower do
+local function collectItems(itemName, delay)
+    while getgenv().CollectCoinsSlow or getgenv().CollectCoinsSlower or getgenv().CollectEggsSlow or getgenv().CollectEggsSlower do
         if checkForMods() then
             getgenv().CollectCoinsSlow = false
             getgenv().CollectCoinsSlower = false
-            break
-        end
-        local character = Players.LocalPlayer.Character or Players.LocalPlayer.CharacterAdded:Wait()
-        local rootPart = character:WaitForChild("HumanoidRootPart")
-        for _, item in pairs(Workspace.Coins:GetChildren()) do
-            if item.Name:lower() == itemName:lower() then
-                firetouchinterest(item, rootPart, 0)
-                task.wait(delay)
-                firetouchinterest(item, rootPart, 1)
-            end
-        end
-        task.wait(1)
-    end
-end
-
-local function collectEggs(itemName, delay)
-    while getgenv().CollectEggsSlow or getgenv().CollectEggsSlower do
-        if checkForMods() then
             getgenv().CollectEggsSlow = false
             getgenv().CollectEggsSlower = false
             break
