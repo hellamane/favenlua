@@ -78,28 +78,6 @@ local function collectItems(itemName, delay)
     end
 end
 
-local function getRewards()
-    while getgenv().GetRewards do
-        if checkForMods() then
-            getgenv().GetRewards = false
-            break
-        end
-        local remotes = ReplicatedStorage:FindFirstChild("Remotes")
-        if remotes then
-            if remotes:FindFirstChild("QuestReward") then
-                remotes.QuestReward:FireServer()
-            end
-            if remotes:FindFirstChild("ChestReward") then
-                remotes.ChestReward:FireServer()
-            end
-            if remotes:FindFirstChild("ActivateGift") then
-                remotes.ActivateGift:FireServer()
-            end
-        end
-        task.wait(5)
-    end
-end
-
 local function ensureGamepasses()
     local gamepasses = {"Spam", "Dual", "Double", "DoubleCoins", "DoubleEnergy", "Flying", "Wear", "AutoRebirth", "DecaStrength", "DoubleTokens", "DoubleXP", "QuadCoins", "QuadStrength", "TripleHatch"}
     for _, gp in ipairs(gamepasses) do
@@ -193,12 +171,6 @@ autofarm:Toggle("Collect Eggs (Slower)", false, function(bool)
         if bool then task.spawn(function() collectItems("egg", 0.6) end) end
     end
 end)
-autofarm:Toggle("Get Rewards", false, function(bool)
-    if not checkForMods() then
-        getgenv().GetRewards = bool
-        if bool then task.spawn(function() getRewards() end) end
-    end
-end)
 
 local opFeatures = serv:Channel("OP Features")
 opFeatures:Toggle("Activate OP Mode", false, function(bool)
@@ -213,18 +185,34 @@ end)
 opFeatures:Button("Gamepasses", function()
     if not checkForMods() then ensureGamepasses() end
 end)
-opFeatures:Dropdown("Pick Rebirth Amount", {"1","5","10","30","50","100","500","750","1000","2500","5000","20000","50000","75000","100000"}, function(value)
-    local num = tonumber(value)
-    if num then
-        local autoRebirthConfig = Players.LocalPlayer:FindFirstChild("PlayerData") and Players.LocalPlayer.PlayerData:FindFirstChild("AutoRebirthConfig")
-        if autoRebirthConfig then
-            local autoAmount = autoRebirthConfig:FindFirstChild("AutoAmount")
-            if autoAmount then
-                autoAmount.Value = num
+opFeatures:Dropdown("Pick Rebirth Amount", 
+    {"1","5","10","30","50","100","500","750","1000","2500","5000","20000","50000","75000","100000"}, 
+    function(value)
+        local num = tonumber(value)
+        if num then
+            local player = Players.LocalPlayer
+            local playerData = player:FindFirstChild("PlayerData")
+            if not playerData then
+                playerData = Instance.new("Folder")
+                playerData.Name = "PlayerData"
+                playerData.Parent = player
             end
+            local autoRebirthConfig = playerData:FindFirstChild("AutoRebirthConfig")
+            if not autoRebirthConfig then
+                autoRebirthConfig = Instance.new("Folder")
+                autoRebirthConfig.Name = "AutoRebirthConfig"
+                autoRebirthConfig.Parent = playerData
+            end
+            local autoAmount = autoRebirthConfig:FindFirstChild("AutoAmount")
+            if not autoAmount then
+                autoAmount = Instance.new("IntValue")
+                autoAmount.Name = "AutoAmount"
+                autoAmount.Parent = autoRebirthConfig
+            end
+            autoAmount.Value = num
         end
     end
-end)
+)
 
 local misc = serv:Channel("Misc")
 misc:Toggle("Anti-Void", false, function(bool)
