@@ -168,8 +168,6 @@ local function antiVoidFunction()
     end
 end
 
--- Part 3: UI Toggles and Buttons
-
 local autofarm = serv:Channel("Autofarm")
 autofarm:Toggle("Collect Coins (Slow)", false, function(bool)
     if not checkForMods() then
