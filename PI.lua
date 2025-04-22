@@ -16,6 +16,7 @@ info:Label("Welcome to Ferret Hub!")
 info:Seperator()
 
 local pizza = serv:Channel("Pizza")
+
 local function bringPizzasToPlayer()
     local player = Players.LocalPlayer
     local character = player.Character or player.CharacterAdded:Wait()
@@ -27,6 +28,7 @@ local function bringPizzasToPlayer()
         end
     end
 end
+
 pizza:Toggle("Collect Pizza", false, function(state)
     getgenv().CollectingPizzas = state
     if state then
@@ -38,6 +40,7 @@ pizza:Toggle("Collect Pizza", false, function(state)
 end)
 
 local rebirth = serv:Channel("Rebirth")
+
 rebirth:Toggle("Auto Rebirth Upgrade", false, function(state)
     getgenv().RebirthUpgrade = state
     if state then
@@ -47,7 +50,9 @@ rebirth:Toggle("Auto Rebirth Upgrade", false, function(state)
         end
     end
 end)
+
 rebirth:Toggle("Auto Rebirth", false, function(state)
+
     getgenv().AutoRebirth = state
     if state then
         while getgenv().AutoRebirth do
@@ -58,6 +63,7 @@ rebirth:Toggle("Auto Rebirth", false, function(state)
 end)
 
 local cheese = serv:Channel("Cheez")
+
 cheese:Toggle("Convert Cheez", false, function(state)
     getgenv().ConvertCheez = state
     if state then
@@ -67,6 +73,7 @@ cheese:Toggle("Convert Cheez", false, function(state)
         end
     end
 end)
+
 cheese:Toggle("Cheez Upgrade", false, function(state)
     getgenv().CheezUpgrade = state
     if state then
@@ -76,6 +83,7 @@ cheese:Toggle("Cheez Upgrade", false, function(state)
         end
     end
 end)
+
 cheese:Button("Convert Max Cheez", function()
     ReplicatedStorage.ConvertMaxCheez:FireServer()
 end)
@@ -90,6 +98,7 @@ pepperoni:Toggle("Convert Pepperoni", false, function(state)
         end
     end
 end)
+
 pepperoni:Toggle("Pepperoni Upgrade", false, function(state)
     getgenv().PepperoniUpgrade = state
     if state then
@@ -99,61 +108,41 @@ pepperoni:Toggle("Pepperoni Upgrade", false, function(state)
         end
     end
 end)
+
 pepperoni:Button("Convert Max Pepperoni", function()
     ReplicatedStorage.ConvertMaxPepperoni:FireServer()
 end)
-pepperoni:Toggle("Wheat Autofarm", false, function(state)
-    getgenv().WheatAutofarm_Pepperoni = state
-    if state then
-        while getgenv().WheatAutofarm_Pepperoni do
-            autoFarmWheat()
-            RunService.Heartbeat:Wait(0.5)
-        end
-    end
-end)
 
 local wheatTab = serv:Channel("Wheat")
+
 local function autoFarmWheat()
     local wheat = Workspace:FindFirstChild("Wheat")
     if wheat then
+
         local dirt = wheat:FindFirstChild("Dirt")
         if dirt then
+		wait(0.5)
             local proxContainer = dirt:FindFirstChild("PROX")
-            if proxContainer then
-                local growPrompt = proxContainer:FindFirstChild("Grow")
-                if growPrompt then
-                    growPrompt.MaxActivationDistance = 10000
-                    growPrompt.HoldDuration = 0
-                    growPrompt.Enabled = true
-                    local attempts = 0
-                    repeat
-                        fireproximityprompt(growPrompt)
-                        wait(0.7)
-                        attempts = attempts + 1
-                    until not wheat:FindFirstChild("Dirt") or attempts >= 3
-                end
+            if proxContainer and proxContainer:FindFirstChild("Grow") then
+                local prompt = proxContainer["Grow"]
+                prompt.MaxActivationDistance = 10000
+                fireproximityprompt(prompt)
             end
         end
+		
         local dirtGrown = wheat:FindFirstChild("DirtGrown")
         if dirtGrown then
+		wait(0.5)
             local proxContainer = dirtGrown:FindFirstChild("PROX")
-            if proxContainer then
-                local collectPrompt = proxContainer:FindFirstChild("Collect")
-                if collectPrompt then
-                    collectPrompt.MaxActivationDistance = 10000
-                    collectPrompt.HoldDuration = 0
-                    collectPrompt.Enabled = true
-                    local attempts = 0
-                    repeat
-                        fireproximityprompt(collectPrompt)
-                        wait(0.7)
-                        attempts = attempts + 1
-                    until not wheat:FindFirstChild("DirtGrown") or attempts >= 3
-                end
+            if proxContainer and proxContainer:FindFirstChild("Collect") then
+                local prompt = proxContainer["Collect"]
+                prompt.MaxActivationDistance = 10000
+                fireproximityprompt(prompt)
             end
         end
     end
 end
+
 wheatTab:Toggle("Wheat Autofarm", false, function(state)
     getgenv().WheatAutofarm = state
     if state then
@@ -165,6 +154,7 @@ wheatTab:Toggle("Wheat Autofarm", false, function(state)
 end)
 
 local dough = serv:Channel("Dough")
+
 dough:Toggle("Dough Upgrade", false, function(state)
     getgenv().DoughUpgrade = state
     if state then
@@ -174,9 +164,11 @@ dough:Toggle("Dough Upgrade", false, function(state)
         end
     end
 end)
+
 dough:Button("Convert Max Dough", function()
     ReplicatedStorage.ConvertMaxDough:FireServer()
 end)
+
 dough:Toggle("Convert Dough", false, function(state)
     getgenv().ConvertDough = state
     if state then
@@ -188,6 +180,7 @@ dough:Toggle("Convert Dough", false, function(state)
 end)
 
 local mushroom = serv:Channel("Mushroom")
+
 mushroom:Toggle("Mushroom Upgrade", false, function(state)
     getgenv().MushroomUpgrade = state
     if state then
@@ -199,6 +192,7 @@ mushroom:Toggle("Mushroom Upgrade", false, function(state)
 end)
 
 local sausage = serv:Channel("Sausage")
+
 sausage:Toggle("Auto Sausage Upgrade", false, function(state)
     getgenv().SausageUpgrade = state
     if state then
@@ -208,6 +202,7 @@ sausage:Toggle("Auto Sausage Upgrade", false, function(state)
         end
     end
 end)
+
 sausage:Toggle("Auto Sausage", false, function(state)
     getgenv().AutoSausage = state
     if state then
@@ -219,17 +214,21 @@ sausage:Toggle("Auto Sausage", false, function(state)
 end)
 
 local oven = serv:Channel("Oven")
+
 oven:Button("Use Oven", function()
     ReplicatedStorage.UseOven:FireServer()
 end)
+
 oven:Button("Use Oven Client", function()
     ReplicatedStorage.UseOvenClient:FireServer()
 end)
 
 local mush = serv:Channel("Mush")
+
 mush:Button("Convert Max Mush", function()
     ReplicatedStorage.ConvertMaxMush:FireServer()
 end)
+
 mush:Toggle("Convert Mush", false, function(state)
     getgenv().ConvertMush = state
     if state then
@@ -239,6 +238,7 @@ mush:Toggle("Convert Mush", false, function(state)
         end
     end
 end)
+
 mush:Toggle("Mush Boost", false, function(state)
     getgenv().MushBoost = state
     if state then
@@ -261,6 +261,7 @@ shrimp:Toggle("Shrimp Upgrade", false, function(state)
 end)
 
 local bell = serv:Channel("Bell")
+
 bell:Toggle("Convert Bell", false, function(state)
     getgenv().ConvertBell = state
     if state then
@@ -275,9 +276,11 @@ bell:Button("Convert Max Bell", function()
 end)
 
 local trait = serv:Channel("Trait")
+
 trait:Button("Convert Max Trait", function()
     ReplicatedStorage.ConvertMaxTrait:FireServer()
 end)
+
 trait:Toggle("Convert Trait", false, function(state)
     getgenv().ConvertTrait = state
     if state then
@@ -289,6 +292,7 @@ trait:Toggle("Convert Trait", false, function(state)
 end)
 
 local anchovy = serv:Channel("Anchovy")
+
 anchovy:Toggle("Collect Anchovy", false, function(state)
     getgenv().CollectAnchovy = state
     if state then
@@ -298,6 +302,7 @@ anchovy:Toggle("Collect Anchovy", false, function(state)
         end
     end
 end)
+
 anchovy:Toggle("Anchovy Upgrade", false, function(state)
     getgenv().AnchovyUpgrade = state
     if state then
@@ -309,9 +314,11 @@ anchovy:Toggle("Anchovy Upgrade", false, function(state)
 end)
 
 local misc = serv:Channel("Misc")
+
 misc:Button("Collect", function()
     ReplicatedStorage.Collect:FireServer()
 end)
+
 misc:Button("Convert", function()
     ReplicatedStorage.Convert:FireServer()
 end)
