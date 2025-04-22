@@ -81,7 +81,7 @@ local function collectItems(itemName, delay)
 end
 
 local function ensureGamepasses()
-    local gamepasses = {"Spam", "Dual", "Double", "DoubleCoins", "DoubleEnergy", "Flying", "Wear", "AutoRebirth", "DecaStrength", "DoubleTokens", "DoubleXP", "QuadCoins", "QuadStrength", "TripleHatch"}
+    local gamepasses = {"Spam", "Double", "DoubleCoins", "DoubleEnergy", "Flying", "AutoRebirth", "DecaStrength", "DoubleTokens", "DoubleXP", "QuadCoins", "QuadStrength", "TripleHatch"}
     for _, gp in ipairs(gamepasses) do
         if not Players.LocalPlayer:FindFirstChild(gp) then
             local newGP = Instance.new("BoolValue")
@@ -95,7 +95,7 @@ local function ensureGamepasses()
 end
 
 local function ensureBoosts()
-    local boosts = {"AutoRebirth", "AutoTrain", "DecaStrength", "DoubleCoins", "DoubleTokens", "DoubleXP", "QuadCoins", "QuadStrength", "TripleHatch"}
+    local boosts = {"AutoRebirth", "AutoTrain", "DecaStrength", "DoubleCoins", "DoubleTokens", "DoubleXP", "QuadCoins", "QuadStrength"}
     local boostsFolder = Players.LocalPlayer:FindFirstChild("Boosts")
     if not boostsFolder then
         boostsFolder = Instance.new("Folder")
