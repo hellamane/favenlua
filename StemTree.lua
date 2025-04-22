@@ -1,3 +1,4 @@
+--// If you gon steal anything give credit | steppin0nsteppas
 local TeleportService = game:GetService("TeleportService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
@@ -17,12 +18,12 @@ elseif game.PlaceId == 116128963769069 then
     executeScript("https://raw.githubusercontent.com/hellamane/favenlua/refs/heads/main/ERX.lua")
 elseif game.PlaceId == 83898177072058 then
     executeScript("https://raw.githubusercontent.com/hellamane/favenlua/refs/heads/main/ORE.lua")
+elseif game.PlaceId == 129764707128321 then
+    executeScript("https://raw.githubusercontent.com/hellamane/favenlua/refs/heads/main/PI.lua")
 elseif game.PlaceId == 360589910 then
     executeScript("https://raw.githubusercontent.com/hellamane/favenlua/refs/heads/main/AH.lua")
-elseif game.PlaceId == 133439346139656 then
-	executeScript("https://raw.githubusercontent.com/hellamane/favenlua/refs/heads/main/FI.lua")
 elseif game.PlaceId == 98848203219584 then
-	executeScript("https://raw.githubusercontent.com/hellamane/favenlua/refs/heads/main/CMI.lua")
+	executeScript("https://raw.githubusercontent.com/hellamane/favenlua/refs/heads/main/C.lua")
 elseif game.PlaceId == 11708967881 then
     executeScript("https://raw.githubusercontent.com/hellamane/favenlua/refs/heads/main/YAF.lua")
 else
@@ -91,9 +92,9 @@ else
             elseif input == "ah" or input == "arab hoops" or input == "arab" or input == "hoops" then
                 ScreenGui:Destroy()
                 TeleportService:Teleport(360589910, LocalPlayer)
-			elseif input == "fi" or input == "fish" or input == "fish incremental" then
+            elseif input == "pi" or input == "pizza" or input == "pizza incremental" or input == "pzza" then
                 ScreenGui:Destroy()
-                TeleportService:Teleport(133439346139656, LocalPlayer)
+                TeleportService:Teleport(129764707128321, LocalPlayer)
 			elseif input == "cube" or input == "cube market" or input == "cube market incremental" then
                 ScreenGui:Destroy()
                 TeleportService:Teleport(98848203219584, LocalPlayer)
@@ -101,7 +102,7 @@ else
                 ScreenGui:Destroy()
                 TeleportService:Teleport(11708967881, LocalPlayer)
             else
-                Notification.Text = "That script doesn't exist. Did you mean 'DLS', 'ERX', 'AH', 'ORE', 'CMI' or 'YAF'?"
+                Notification.Text = "That script doesn't exist. Did you mean 'DLS', 'ERX', 'AH', 'ORE' or 'YAF'?"
                 playDiscordSound()
                 wait(3)
                 Notification.Text = ""
