@@ -81,7 +81,7 @@ local function collectItems(itemName, delay)
 end
 
 local function ensureGamepasses()
-    local gamepasses = {"Spam", "Double", "DoubleCoins", "DoubleEnergy", "Flying", "AutoRebirth", "DecaStrength", "DoubleTokens", "DoubleXP", "QuadCoins", "QuadStrength", "TripleHatch"}
+    local gamepasses = {"Spam", "Double", "VIP", "DoubleCoins", "DoubleEnergy", "Flying", "AutoRebirth", "DecaStrength", "DoubleTokens", "DoubleXP", "QuadCoins", "QuadStrength", "TripleHatch"}
     for _, gp in ipairs(gamepasses) do
         if not Players.LocalPlayer:FindFirstChild(gp) then
             local newGP = Instance.new("BoolValue")
