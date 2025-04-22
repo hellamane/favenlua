@@ -111,13 +111,39 @@ pepperoni:Button("Convert Max Pepperoni", function()
     ReplicatedStorage.ConvertMaxPepperoni:FireServer()
 end)
 
-pepperoni:Toggle("Wheat Autofarm", false, function(state)
+local wheatTab = serv:Channel("Wheat")
+
+local function autoFarmWheat()
+    local wheat = Workspace:FindFirstChild("Wheat")
+    if wheat then
+
+        local dirt = wheat:FindFirstChild("Dirt")
+        if dirt then
+            local proxContainer = dirt:FindFirstChild("PROX")
+            if proxContainer and proxContainer:FindFirstChild("Grow") then
+                local prompt = proxContainer["Grow"]
+                prompt.MaxActivationDistance = 10000
+                fireproximityprompt(prompt)
+            end
+        end
+		
+        local dirtGrown = wheat:FindFirstChild("DirtGrown")
+        if dirtGrown then
+            local proxContainer = dirtGrown:FindFirstChild("PROX")
+            if proxContainer and proxContainer:FindFirstChild("Collect") then
+                local prompt = proxContainer["Collect"]
+                prompt.MaxActivationDistance = 10000
+                fireproximityprompt(prompt)
+            end
+        end
+    end
+end
+
+wheatTab:Toggle("Wheat Autofarm", false, function(state)
     getgenv().WheatAutofarm = state
     if state then
         while getgenv().WheatAutofarm do
-            ReplicatedStorage.AddWheat:FireServer()
-            ReplicatedStorage.WheatGrow:FireServer()
-            ReplicatedStorage.CollectWheat:FireServer()
+            autoFarmWheat()
             RunService.Heartbeat:Wait(0.5)
         end
     end
