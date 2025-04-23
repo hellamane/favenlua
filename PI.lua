@@ -232,7 +232,7 @@ sausage:Toggle("Get Sausages", false, function(state)
                     if root then
                         sp.CFrame = root.CFrame
                     end
-                    task.wait(0.3)
+                    task.wait(0.2)
                 end
             end)
         else
@@ -279,7 +279,7 @@ local function autoFarmShrimp()
         local attempts = 0
         while getgenv().ShrimpAutofarm and attempts < 3 do
             fireproximityprompt(prompt)
-            task.wait(0.7)
+            task.wait(0.4)
             attempts = attempts + 1
         end
     end
