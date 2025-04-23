@@ -81,7 +81,7 @@ local function collectItems(itemName, delay)
 end
 
 local function ensureGamepasses()
-    local gamepasses = {"Spam", "Double", "VIP", "DoubleCoins", "DoubleEnergy", "Flying", "AutoRebirth", "DecaStrength", "DoubleTokens", "DoubleXP", "QuadCoins", "QuadStrength", "TripleHatch"}
+    local gamepasses = {"Double", "VIP", "DoubleCoins", "DoubleEnergy", "Flying", "AutoRebirth", "DecaStrength", "DoubleTokens", "DoubleXP", "QuadCoins", "QuadStrength", "TripleHatch"}
     for _, gp in ipairs(gamepasses) do
         if not Players.LocalPlayer:FindFirstChild(gp) then
             local newGP = Instance.new("BoolValue")
@@ -138,7 +138,7 @@ local function antiVoidFunction()
     local char = Players.LocalPlayer.Character
     if char then
         local root = char:FindFirstChild("HumanoidRootPart")
-        if root and root.Position.Y < -50 then
+        if root and root.Position.Y < -40 then
             local spawn = Workspace:FindFirstChild("SpawnLocation")
             if spawn then
                 local tweenInfo = TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
