@@ -149,28 +149,28 @@ local function antiVoidFunction()
 end
 
 local autofarm = serv:Channel("Autofarm")
-autofarm:Toggle("Collect Coins (Slow)", false, function(bool)
+autofarm:Toggle("Collect Coins", false, function(bool)
     if not checkForMods() then
         getgenv().CollectCoinsSlow = bool
+        if bool then task.spawn(function() collectItems("coin", 0.2) end) end
+    end
+end)
+autofarm:Toggle("Collect Coins (Slow)", false, function(bool)
+    if not checkForMods() then
+        getgenv().CollectCoinsSlower = bool
         if bool then task.spawn(function() collectItems("coin", 0.4) end) end
     end
 end)
-autofarm:Toggle("Collect Coins (Slower)", false, function(bool)
+autofarm:Toggle("Collect Eggs", false, function(bool)
     if not checkForMods() then
-        getgenv().CollectCoinsSlower = bool
-        if bool then task.spawn(function() collectItems("coin", 0.6) end) end
+        getgenv().CollectEggsSlow = bool
+        if bool then task.spawn(function() collectItems("egg", 0.2) end) end
     end
 end)
 autofarm:Toggle("Collect Eggs (Slow)", false, function(bool)
     if not checkForMods() then
-        getgenv().CollectEggsSlow = bool
-        if bool then task.spawn(function() collectItems("egg", 0.4) end) end
-    end
-end)
-autofarm:Toggle("Collect Eggs (Slower)", false, function(bool)
-    if not checkForMods() then
         getgenv().CollectEggsSlower = bool
-        if bool then task.spawn(function() collectItems("egg", 0.6) end) end
+        if bool then task.spawn(function() collectItems("egg", 0.4) end) end
     end
 end)
 
