@@ -238,6 +238,70 @@ misc:Button("FPS Boost", function()
     end
 end)
 
+local eggs = serv:Channel("Eggs")
+local selectedCapsule = nil
+local originalCapsuleCFrame = nil
+
+
+eggs:Dropdown("Pick an egg", {"Arctic", "Candy", "Cave", "Desert2", "Elemental", "EternalEaster", "Frozen", "Jungle2", "Lava", "Nature", "Radioactive", "Shadow", "Tokens"}, function(value)
+    if Workspace:FindFirstChild("Capsules") then
+        selectedCapsule = Workspace.Capsules:FindFirstChild(value)
+        if selectedCapsule then
+            if selectedCapsule.PrimaryPart then
+                originalCapsuleCFrame = selectedCapsule.PrimaryPart.CFrame
+            end
+
+            for _, part in ipairs(selectedCapsule:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = false
+                end
+            end
+        end
+    end
+end)
+
+eggs:Toggle("Open Egg", false, function(state)
+    getgenv().OpenEgg = state
+    local player = Players.LocalPlayer
+    if state and selectedCapsule then
+        spawn(function()
+            while getgenv().OpenEgg and selectedCapsule do
+                local character = player.Character or player.CharacterAdded:Wait()
+                local root = character:FindFirstChild("HumanoidRootPart")
+                if root and selectedCapsule.PrimaryPart then
+                    local capsuleCFrame = selectedCapsule.PrimaryPart.CFrame
+
+                    local targetCFrame = capsuleCFrame * CFrame.new(0, -4, 0)
+                    root.CFrame = targetCFrame
+                end
+
+                local playerGui = player:FindFirstChild("PlayerGui")
+                if playerGui and playerGui:FindFirstChild("CapsuleUi") and playerGui.CapsuleUi:FindFirstChild("AutoOpen") then
+                    playerGui.CapsuleUi.AutoOpen.Value = true
+                end
+                wait(5)
+            end
+        end)
+    else
+
+        local spawnLoc = Workspace:FindFirstChild("SpawnLocation")
+        local character = player.Character or player.CharacterAdded:Wait()
+        local root = character:FindFirstChild("HumanoidRootPart")
+        if spawnLoc and root then
+            if spawnLoc:IsA("BasePart") then
+                root.CFrame = spawnLoc.CFrame
+            else
+                root.CFrame = spawnLoc
+            end
+        end
+
+        local playerGui = player:FindFirstChild("PlayerGui")
+        if playerGui and playerGui:FindFirstChild("CapsuleUi") and playerGui.CapsuleUi:FindFirstChild("AutoOpen") then
+            playerGui.CapsuleUi.AutoOpen.Value = false
+        end
+    end
+end)
+
 local modNotification
 RunService.Heartbeat:Connect(function()
     if checkForMods() then
