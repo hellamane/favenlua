@@ -161,18 +161,6 @@ autofarm:Toggle("Collect Coins (Slow)", false, function(bool)
         if bool then task.spawn(function() collectItems("coin", 0.4) end) end
     end
 end)
-autofarm:Toggle("Collect Eggs", false, function(bool)
-    if not checkForMods() then
-        getgenv().CollectEggsSlow = bool
-        if bool then task.spawn(function() collectItems("egg", 0.2) end) end
-    end
-end)
-autofarm:Toggle("Collect Eggs (Slow)", false, function(bool)
-    if not checkForMods() then
-        getgenv().CollectEggsSlower = bool
-        if bool then task.spawn(function() collectItems("egg", 0.4) end) end
-    end
-end)
 
 local opFeatures = serv:Channel("OP Features")
 opFeatures:Toggle("Activate OP Mode", false, function(bool)
