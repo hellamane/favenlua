@@ -234,35 +234,45 @@ misc:Button("FPS Boost", function()
     end
 end)
 
-misc:Button("mod detector", function()
-    if not _G.modDetectorActive then
-        _G.modDetectorActive = true
-        local modStatus = checkForMods() and "Mods are in the server!" or "Mods are not in the server!"
-        local color = checkForMods() and Color3.fromRGB(139,0,0) or Color3.fromRGB(0,128,0)
-        local screenGui = Instance.new("ScreenGui")
-        screenGui.Name = "ModDetectorGui"
-        screenGui.ResetOnSpawn = false
-        screenGui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
-        local label = Instance.new("TextLabel")
-        label.Name = "ModDetectorLabel"
-        label.Size = UDim2.new(0, 400, 0, 50)
-        label.Position = UDim2.new(0.5, -200, 0, 0)
-        label.BackgroundTransparency = 1
-        label.Text = modStatus
-        label.TextColor3 = color
-        label.Font = Enum.Font.SourceSansBold
-        label.TextSize = 19
-        label.Parent = screenGui
-        local tweenInfo = TweenInfo.new(5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-        local tweenInc = TweenService:Create(label, tweenInfo, {TextSize = 25})
-        local tweenDec = TweenService:Create(label, tweenInfo, {TextSize = 19})
-        tweenInc:Play()
-        tweenInc.Completed:Wait()
-        tweenDec:Play()
-        tweenDec.Completed:Wait()
-        wait(10)
-        screenGui:Destroy()
-        _G.modDetectorActive = false
+misc:Toggle("Mod Detector", false, function(state)
+    if state then
+        getgenv().ModDetectorActive = true
+        local modDetectorGui = Instance.new("ScreenGui")
+        modDetectorGui.Name = "ModDetectorGui"
+        modDetectorGui.ResetOnSpawn = false
+        modDetectorGui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
+        local modDetectorLabel = Instance.new("TextLabel")
+        modDetectorLabel.Name = "ModDetectorLabel"
+        modDetectorLabel.Size = UDim2.new(0, 800, 0, 100)
+        modDetectorLabel.Position = UDim2.new(0.5, -400, 0, 0)
+        modDetectorLabel.BackgroundTransparency = 1
+        modDetectorLabel.Font = Enum.Font.SourceSansBold
+        modDetectorLabel.TextSize = 38
+        modDetectorLabel.Parent = modDetectorGui
+        spawn(function()
+            while getgenv().ModDetectorActive do
+                if checkForMods() then
+                    modDetectorLabel.Text = "Mods are in the server!"
+                    modDetectorLabel.TextColor3 = Color3.fromRGB(139, 0, 0)
+                    local tweenInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+                    local tweenInc = TweenService:Create(modDetectorLabel, tweenInfo, {TextSize = 50})
+                    tweenInc:Play()
+                    tweenInc.Completed:Wait()
+                    local tweenDec = TweenService:Create(modDetectorLabel, tweenInfo, {TextSize = 38})
+                    tweenDec:Play()
+                    tweenDec.Completed:Wait()
+                else
+                    modDetectorLabel.Text = "Mods are not in the server!"
+                    modDetectorLabel.TextColor3 = Color3.fromRGB(0, 128, 0)
+                    modDetectorLabel.TextSize = 38
+                    wait(0.5)
+                end
+            end
+        end)
+    else
+        getgenv().ModDetectorActive = false
+        local gui = Players.LocalPlayer:FindFirstChild("PlayerGui"):FindFirstChild("ModDetectorGui")
+        if gui then gui:Destroy() end
     end
 end)
 
