@@ -10,6 +10,8 @@ local serv = win:Server("Home", "")
 local info = serv:Channel("Info")
 local autofarm = serv:Channel("Autofarm")
 local misc = serv:Channel("Misc")
+local gamepass = serv:Channel("Gamepass")
+local textbs = serv:Channel("Textboxes")
 
 info:Label("By dawid#7205 & steppin0nsteppas")
 info:Seperator()
@@ -38,25 +40,64 @@ autofarm:Toggle("Collect Rocks", false, function(state)
     if not rocksFolder then return end
     if state then
         rockAddedConnection = rocksFolder.ChildAdded:Connect(function(child)
-            if child:IsA("BasePart") then
-                if not originalRocksPositions[child] then
-                    originalRocksPositions[child] = child.CFrame
-                    originalRocksTransparencies[child] = child.Transparency
+            local part, origCFrame, origTrans = nil, nil, {}
+            if child:IsA("Model") then
+                part = child.PrimaryPart or child:FindFirstChildWhichIsA("BasePart")
+                if part then
+                    origCFrame = child.PrimaryPart and child:GetPrimaryPartCFrame() or part.CFrame
+                    for _, p in ipairs(child:GetDescendants()) do
+                        if p:IsA("BasePart") then origTrans[p] = p.Transparency end
+                    end
                 end
-                child.CFrame = hrp.CFrame
-                child.Transparency = 1
+            elseif child:IsA("BasePart") then
+                part = child
+                origCFrame = child.CFrame
+                origTrans[child] = child.Transparency
+            end
+            if part then
+                originalRocksPositions[child] = origCFrame
+                originalRocksTransparencies[child] = origTrans
+                if child:IsA("Model") then
+                    child:SetPrimaryPartCFrame(hrp.CFrame)
+                    for _, p in ipairs(child:GetDescendants()) do
+                        if p:IsA("BasePart") then
+                            p.Transparency = 1
+                        end
+                    end
+                else
+                    part.CFrame = hrp.CFrame
+                    part.Transparency = 1
+                end
             end
         end)
         spawn(function()
             while collectRocksActive do
                 for _, rock in ipairs(rocksFolder:GetChildren()) do
-                    if rock:IsA("BasePart") then
+                    local part, origCFrame, origTrans = nil, nil, {}
+                    if rock:IsA("Model") then
+                        part = rock.PrimaryPart or rock:FindFirstChildWhichIsA("BasePart")
+                        if part then
+                            if not originalRocksPositions[rock] then
+                                origCFrame = rock.PrimaryPart and rock:GetPrimaryPartCFrame() or part.CFrame
+                                for _, p in ipairs(rock:GetDescendants()) do
+                                    if p:IsA("BasePart") then origTrans[p] = p.Transparency end
+                                end
+                                originalRocksPositions[rock] = origCFrame
+                                originalRocksTransparencies[rock] = origTrans
+                            end
+                            rock:SetPrimaryPartCFrame(hrp.CFrame)
+                            for _, p in ipairs(rock:GetDescendants()) do
+                                if p:IsA("BasePart") then p.Transparency = 1 end
+                            end
+                        end
+                    elseif rock:IsA("BasePart") then
+                        part = rock
                         if not originalRocksPositions[rock] then
                             originalRocksPositions[rock] = rock.CFrame
-                            originalRocksTransparencies[rock] = rock.Transparency
+                            originalRocksTransparencies[rock] = { [rock] = rock.Transparency }
                         end
-                        rock.CFrame = hrp.CFrame
-                        rock.Transparency = 1
+                        part.CFrame = hrp.CFrame
+                        part.Transparency = 1
                     end
                 end
                 wait(0.2)
@@ -69,15 +110,29 @@ autofarm:Toggle("Collect Rocks", false, function(state)
         end
         for rock, orig in pairs(originalRocksPositions) do
             if rock and rock.Parent then
-                rock.CFrame = orig
-                rock.Transparency = originalRocksTransparencies[rock] or 0
+                if rock:IsA("Model") then
+                    if rock.PrimaryPart then
+                        rock:SetPrimaryPartCFrame(orig)
+                    else
+                        local part = rock:FindFirstChildWhichIsA("BasePart")
+                        if part then part.CFrame = orig end
+                    end
+                    local transTable = originalRocksTransparencies[rock] or {}
+                    for partObj, trans in pairs(transTable) do
+                        if partObj and partObj.Parent then
+                            partObj.Transparency = trans
+                        end
+                    end
+                elseif rock:IsA("BasePart") then
+                    rock.CFrame = orig
+                    rock.Transparency = (originalRocksTransparencies[rock] and originalRocksTransparencies[rock][rock]) or 0
+                end
             end
         end
         originalRocksPositions = {}
         originalRocksTransparencies = {}
     end
 end)
-
 local rollButtonActive = false
 autofarm:Toggle("Roll Button", false, function(state)
     rollButtonActive = state
@@ -96,6 +151,7 @@ autofarm:Toggle("Roll Button", false, function(state)
     end
 end)
 
+--------------------[Automate Upgrades]--------------------
 local automateOriginals
 autofarm:Toggle("Automate", false, function(state)
     local player = Players.LocalPlayer
@@ -129,7 +185,6 @@ autofarm:Toggle("Automate", false, function(state)
         end
     end
 end)
-
 local antiAFKEnabled = false
 local antiAFKConnection
 misc:Toggle("Anti AFK", false, function(state)
@@ -234,3 +289,73 @@ misc:Toggle("See All Boards", false, function(state)
 end)
 
 Workspace.Map.Decoration.Grass:Destroy()
+
+local gpOptions = {"Walkspeed","VIP","Speedy Rolls","Range","Field Overdrive","Lucky","Connoisseur","Cash"}
+local selectedGPOptions = {}
+local selectedGPNumbers = {}
+local gpDropdown = gamepass:Dropdown("Pick Gamepasses", gpOptions, function(opt)
+    if table.find(selectedGPOptions, opt) then
+        for i,v in ipairs(selectedGPOptions) do
+            if v == opt then table.remove(selectedGPOptions, i) break end
+        end
+    else
+        table.insert(selectedGPOptions, opt)
+    end
+end)
+local gpNumDropdown = gamepass:Dropdown("Pick Gamepass Numbers", gpOptions, function(opt)
+    if table.find(selectedGPNumbers, opt) then
+        for i,v in ipairs(selectedGPNumbers) do
+            if v == opt then table.remove(selectedGPNumbers, i) break end
+        end
+    else
+        table.insert(selectedGPNumbers, opt)
+    end
+end)
+local originalGPBool = {}
+gamepass:Toggle("Get Gamepass", false, function(state)
+    local gp = Players.LocalPlayer.PlrData.Gamepasses
+    if state then
+        for _, opt in ipairs(selectedGPOptions) do
+            if gp[opt] then
+                originalGPBool[opt] = gp[opt].Value
+                gp[opt].Value = true
+            end
+        end
+    else
+        for _, opt in ipairs(selectedGPOptions) do
+            if gp[opt] then
+                if originalGPBool[opt] ~= nil then
+                    gp[opt].Value = originalGPBool[opt]
+                else
+                    gp[opt].Value = false
+                end
+            end
+        end
+    end
+end)
+textbs:Textbox("Set Gamepass Value", "Enter a number (max 500)", true, function(t)
+    local num = tonumber(t)
+    if num and num <= 500 then
+        local gp = Players.LocalPlayer.PlrData.Gamepasses
+        for _, opt in ipairs(selectedGPNumbers) do
+            if gp[opt] then
+                gp[opt].Value = num
+            end
+        end
+    else
+        local sg = Instance.new("ScreenGui")
+        sg.Name = "GPValueNotif"
+        sg.ResetOnSpawn = false
+        sg.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
+        local lab = Instance.new("TextLabel")
+        lab.Size = UDim2.new(0,400,0,50)
+        lab.Position = UDim2.new(0.5,-200,0,0)
+        lab.BackgroundTransparency = 1
+        lab.Text = "Woah, you cant do that!"
+        lab.TextColor3 = Color3.new(1,0,0)
+        lab.Font = Enum.Font.SourceSansBold
+        lab.TextSize = 24
+        lab.Parent = sg
+        delay(5, function() if sg then sg:Destroy() end end)
+    end
+end)
