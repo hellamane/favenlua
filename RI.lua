@@ -11,7 +11,6 @@ local info = serv:Channel("Info")
 local autofarm = serv:Channel("Autofarm")
 local misc = serv:Channel("Misc")
 local gamepass = serv:Channel("Gamepass")
-local textbs = serv:Channel("Textboxes")
 
 info:Label("By dawid#7205 & steppin0nsteppas")
 info:Seperator()
@@ -60,9 +59,7 @@ autofarm:Toggle("Collect Rocks", false, function(state)
                 if child:IsA("Model") then
                     child:SetPrimaryPartCFrame(hrp.CFrame)
                     for _, p in ipairs(child:GetDescendants()) do
-                        if p:IsA("BasePart") then
-                            p.Transparency = 1
-                        end
+                        if p:IsA("BasePart") then p.Transparency = 1 end
                     end
                 else
                     part.CFrame = hrp.CFrame
@@ -133,6 +130,7 @@ autofarm:Toggle("Collect Rocks", false, function(state)
         originalRocksTransparencies = {}
     end
 end)
+
 local rollButtonActive = false
 autofarm:Toggle("Roll Button", false, function(state)
     rollButtonActive = state
@@ -141,7 +139,7 @@ autofarm:Toggle("Roll Button", false, function(state)
             local player = Players.LocalPlayer
             local character = player.Character or player.CharacterAdded:Wait()
             local hrp = character:WaitForChild("HumanoidRootPart")
-            local rollPart = Workspace:FindFirstChild("Roll") and Workspace.Roll:FindFirstChild("Button") and Workspace.Roll.Button:FindFirstChild("Button")
+            local rollPart = Workspace.Roll and Workspace.Roll.Button and Workspace.Roll.Button.Button
             if not rollPart then return end
             while rollButtonActive do
                 hrp.CFrame = rollPart.CFrame
@@ -151,7 +149,6 @@ autofarm:Toggle("Roll Button", false, function(state)
     end
 end)
 
---------------------[Automate Upgrades]--------------------
 local automateOriginals
 autofarm:Toggle("Automate", false, function(state)
     local player = Players.LocalPlayer
@@ -185,6 +182,7 @@ autofarm:Toggle("Automate", false, function(state)
         end
     end
 end)
+
 local antiAFKEnabled = false
 local antiAFKConnection
 misc:Toggle("Anti AFK", false, function(state)
@@ -290,63 +288,85 @@ end)
 
 Workspace.Map.Decoration.Grass:Destroy()
 
-local gpOptions = {"Walkspeed","VIP","Speedy Rolls","Range","Field Overdrive","Lucky","Connoisseur","Cash"}
-local selectedGPOptions = {}
-local selectedGPNumbers = {}
-local gpDropdown = gamepass:Dropdown("Pick Gamepasses", gpOptions, function(opt)
-    if table.find(selectedGPOptions, opt) then
-        for i,v in ipairs(selectedGPOptions) do
-            if v == opt then table.remove(selectedGPOptions, i) break end
-        end
-    else
-        table.insert(selectedGPOptions, opt)
-    end
-end)
-local gpNumDropdown = gamepass:Dropdown("Pick Gamepass Numbers", gpOptions, function(opt)
-    if table.find(selectedGPNumbers, opt) then
-        for i,v in ipairs(selectedGPNumbers) do
-            if v == opt then table.remove(selectedGPNumbers, i) break end
-        end
-    else
-        table.insert(selectedGPNumbers, opt)
-    end
-end)
-local originalGPBool = {}
-gamepass:Toggle("Get Gamepass", false, function(state)
-    local gp = Players.LocalPlayer.PlrData.Gamepasses
-    if state then
-        for _, opt in ipairs(selectedGPOptions) do
-            if gp[opt] then
-                originalGPBool[opt] = gp[opt].Value
-                gp[opt].Value = true
+local gp = Players.LocalPlayer.PlrData.Gamepasses
+local gpList = {"Walkspeed","VIP","Speedy Rolls","Range","Field Overdrive","Lucky","Connoisseur","Cash"}
+local originalGPValues = {}
+local gpToggleOn = false
+
+gamepass:Textbox("Gamepass Toggle", "Enter comma separated gamepass names", false, function(text)
+    local validNames = {}
+    for token in string.gmatch(text, "([^,]+)") do
+        token = token:gsub("^%s*(.-)%s*$", "%1")
+        local found = false
+        for _, name in ipairs(gpList) do
+            if name:lower() == token:lower() then
+                table.insert(validNames, name)
+                found = true
+                break
             end
         end
-    else
-        for _, opt in ipairs(selectedGPOptions) do
-            if gp[opt] then
-                if originalGPBool[opt] ~= nil then
-                    gp[opt].Value = originalGPBool[opt]
-                else
-                    gp[opt].Value = false
+        if not found then
+            local notif = Instance.new("ScreenGui")
+            notif.Name = "GPNameNotif"
+            notif.ResetOnSpawn = false
+            notif.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
+            local lab = Instance.new("TextLabel")
+            lab.Size = UDim2.new(0,400,0,50)
+            lab.Position = UDim2.new(0.5,-200,0,0)
+            lab.BackgroundTransparency = 1
+            lab.Text = "Wrong name! Did you mean: " .. table.concat(gpList, ", ")
+            lab.TextColor3 = Color3.new(1,0,0)
+            lab.Font = Enum.Font.SourceSansBold
+            lab.TextSize = 24
+            lab.Parent = notif
+            delay(5, function() if notif then notif:Destroy() end end)
+            return
+        end
+    end
+    if #validNames > 0 then
+        if not gpToggleOn then
+            gpToggleOn = true
+            for _, name in ipairs(validNames) do
+                if gp[name] then
+                    originalGPValues[name] = gp[name].Value
+                    gp[name].Value = true
+                end
+            end
+        else
+            gpToggleOn = false
+            for _, name in ipairs(validNames) do
+                if gp[name] then
+                    gp[name].Value = originalGPValues[name] or false
                 end
             end
         end
     end
 end)
-textbs:Textbox("Set Gamepass Value", "Enter a number (max 500)", true, function(t)
-    local num = tonumber(t)
-    if num and num <= 500 then
-        local gp = Players.LocalPlayer.PlrData.Gamepasses
-        for _, opt in ipairs(selectedGPNumbers) do
-            if gp[opt] then
-                gp[opt].Value = num
-            end
-        end
-    else
-        local sg = Instance.new("ScreenGui")
-        sg.Name = "GPValueNotif"
-        sg.ResetOnSpawn = false
-        sg.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
+
+gamepass:Textbox("Set Gamepass Value", "Enter value (max 500)", false, function(text)
+    local num = tonumber(text)
+    if not num then
+        local notif = Instance.new("ScreenGui")
+        notif.Name = "GPValueNotif"
+        notif.ResetOnSpawn = false
+        notif.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
+        local lab = Instance.new("TextLabel")
+        lab.Size = UDim2.new(0,400,0,50)
+        lab.Position = UDim2.new(0.5,-200,0,0)
+        lab.BackgroundTransparency = 1
+        lab.Text = "That isn't a number!"
+        lab.TextColor3 = Color3.new(1,0,0)
+        lab.Font = Enum.Font.SourceSansBold
+        lab.TextSize = 24
+        lab.Parent = notif
+        delay(5, function() if notif then notif:Destroy() end end)
+        return
+    end
+    if num > 500 then
+        local notif = Instance.new("ScreenGui")
+        notif.Name = "GPValueNotif"
+        notif.ResetOnSpawn = false
+        notif.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
         local lab = Instance.new("TextLabel")
         lab.Size = UDim2.new(0,400,0,50)
         lab.Position = UDim2.new(0.5,-200,0,0)
@@ -355,7 +375,14 @@ textbs:Textbox("Set Gamepass Value", "Enter a number (max 500)", true, function(
         lab.TextColor3 = Color3.new(1,0,0)
         lab.Font = Enum.Font.SourceSansBold
         lab.TextSize = 24
-        lab.Parent = sg
-        delay(5, function() if sg then sg:Destroy() end end)
+        lab.Parent = notif
+        delay(5, function() if notif then notif:Destroy() end end)
+        return
+    end
+    local gp = Players.LocalPlayer.PlrData.Gamepasses
+    for _, key in ipairs(gpList) do
+        if gp[key] then
+            gp[key].Value = num
+        end
     end
 end)
