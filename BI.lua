@@ -10,24 +10,21 @@ local win = DiscordLib:Window("faven.lua")
 local serv = win:Server("Main", "")
 local autofarmChannel = serv:Channel("Autofarm")
 
-------------------------------------------------------------
--- Toggles
-------------------------------------------------------------
 local breadToggle = false
 local crateToggle = false
 local autosellToggle = false
 local antiKickToggle = false
 local antiKickConnection = nil
 
-autofarmChannel:Toggle("Bread Toggle", false, function(state)
+autofarmChannel:Toggle("Collect Bread", false, function(state)
 	breadToggle = state
 end)
 
-autofarmChannel:Toggle("Crate Toggle", false, function(state)
+autofarmChannel:Toggle("Collect Crates (FPS Boost Helps)", false, function(state)
 	crateToggle = state
 end)
 
-autofarmChannel:Toggle("Autosell Toggle", false, function(state)
+autofarmChannel:Toggle("Autosell", false, function(state)
 	autosellToggle = state
 end)
 
@@ -53,9 +50,6 @@ autofarmChannel:Button("Boost FPS", function()
 	end
 end)
 
-------------------------------------------------------------
--- Bread Loop
-------------------------------------------------------------
 spawn(function()
 	local player = Players.LocalPlayer
 	if not player.Character then player.CharacterAdded:Wait() end
@@ -83,9 +77,6 @@ spawn(function()
 	end
 end)
 
-------------------------------------------------------------
--- Crate Loop
-------------------------------------------------------------
 spawn(function()
 	local player = Players.LocalPlayer
 	while wait(0.1) do
@@ -108,7 +99,7 @@ spawn(function()
 							validFound = true
 							local character = player.Character or player.CharacterAdded:Wait()
 							local hrp = character:WaitForChild("HumanoidRootPart")
-							if (hrp.Position - base.Position).Magnitude <= 50 then
+							if (hrp.Position - base.Position).Magnitude <= 500 then
 								hrp.CFrame = base.CFrame * CFrame.new(0, 0, 3)
 								
 								-- Re-hold loop: hold "E" until at least 2 seconds have passed or the crate becomes open.
@@ -142,9 +133,6 @@ spawn(function()
 	end
 end)
 
-------------------------------------------------------------
--- Autosell Loop
-------------------------------------------------------------
 spawn(function()
 	local player = Players.LocalPlayer
 	local sellButton = Workspace:WaitForChild("Map"):WaitForChild("SellScreen"):WaitForChild("Button")
