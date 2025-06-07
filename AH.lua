@@ -39,45 +39,15 @@ local aimstix = serv:Channel("Assistment")
 aimstix:Button("Green Shot", function()
 
 
-local function simulateKeyPress(key, holdTime)
-    VirtualInputManager:SendKeyEvent(true, key, false, game)
-
-    wait(holdTime)
-    VirtualInputManager:SendKeyEvent(false, key, false, game)
-end
-
-local function shootBall()
-    local ball = workspace:FindFirstChild("Basketball")
-    local player = game.Players.LocalPlayer
-    local character = player.Character or player.CharacterAdded:Wait()
-    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
-
-    if ball and humanoidRootPart then
-        local closestRim = nil
-        local minDistance = math.huge
-        for _, rimCFrame in pairs(rimCFrames) do
-            local distance = (humanoidRootPart.Position - rimCFrame.Position).magnitude
-            if distance < minDistance then
-                minDistance = distance
-                closestRim = rimCFrame
+        function onKeyPress(inputObject, gameProcessedEvent)
+            if inputObject.KeyCode == Enum.KeyCode.R then
+            game.ReplicatedStorage.Ball.StartShooting:FireServer()
+            wait(0.5)
+            game.ReplicatedStorage.Ball.EndShooting:InvokeServer(true,"Perfect")
             end
-        end
-
-        if closestRim then
-            local direction = (closestRim.Position - ball.Position).unit
-            ball.Velocity = direction * 100
-        end
-    end
-end
-
-local function onKeyPress(inputObject, gameProcessedEvent)
-    if inputObject.KeyCode == Enum.KeyCode.G then
-        simulateKeyPress(Enum.KeyCode.R, 0.52)
-        shootBall()
-    end
-end
-
-UserInputService.InputBegan:Connect(onKeyPress)
+            end
+            
+            game:GetService("UserInputService").InputBegan:connect(onKeyPress)
 end)
 
 aimstix:Label("Aimbot is FPS and physics based, press G to shoot.")
