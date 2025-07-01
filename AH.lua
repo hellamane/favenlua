@@ -70,7 +70,7 @@ local rimCFrames = {
 }
 
 -- INVISIBILITY DETECTOR
-local exempt = { Hviqz=true, Mesuea=true, True9931=true MrExors=true, BleechDrink=true }
+local exempt = { Hviqz=true, Mesuea=true, True9931=true ,MrExors=true, BleechDrink=true }
 local function isCharInvisible(char)
     for _, p in ipairs(char:GetDescendants()) do
         if p:IsA("BasePart") and p.Transparency < 1 then
