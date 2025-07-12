@@ -31,7 +31,7 @@ local lastSteal      = 0
 local blockShotAnimObj = Instance.new("Animation")
 blockShotAnimObj.AnimationId = "rbxassetid://385554867"
 
--- UI LIB
+
 local DiscordLib = loadstring(game:HttpGet(
     "https://raw.githubusercontent.com/dawid-scripts/UI-Libs/main/discord%20lib.txt"
 ))()
@@ -45,7 +45,7 @@ local lbls  = home:Channel("Hoops Discontinued")
 local king   = win:Server("King", "")
 local assist = king:Channel("Assistment")
 
--- RIM POSITIONS
+
 local rimCFrames = {
     CFrame.new(-51.5, 11, 0),
     CFrame.new(51.5, 11, 0),
@@ -84,7 +84,7 @@ local function checkInvisibility()
     end)
 end
 
--- INFINITE STAMINA
+
 function doInfstamina()
     spawn(function()
         while getgenv().Infstamina do
@@ -126,7 +126,7 @@ local function resetArms()
     originalArmSizes = {}
 end
 
--- BLOCK SHOTS: Legit Blocks Only
+-- BLOCK SHOTS
 function doBlockShots()
     spawn(function()
         while getgenv().BlockShots do
@@ -191,7 +191,7 @@ function doInbound()
     end)
 end
 
--- GOALTEND: Tween to rim, stops if you grab ball
+-- GOALTEND
 function doGoaltend()
     local tweenSpeed = 0.1
     local tweenInfo  = TweenInfo.new(tweenSpeed, Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
@@ -223,11 +223,11 @@ function doGoaltend()
     end)
 end
 
--- PRELOAD GREEN SHOT
+
 local greenShotAnim = Instance.new("Animation")
 greenShotAnim.AnimationId = "rbxassetid://376938580"
 
--- UI TOGGLES & BUTTONS
+
 assist:Toggle("Invisible Detector", false, function(b)
     getgenv().InvDetect = b
     if b then checkInvisibility() end
@@ -283,7 +283,7 @@ assist:Toggle("Ball Reach", false, function(enabled)
         end)
 
     else
-        -- Toggled off: clean up
+        -- clean up
         if reachConn then
             reachConn:Disconnect()
             reachConn = nil
@@ -397,7 +397,7 @@ assist:Button("FPS Boost", function()
     end
 end)
 
--- CHANGE ANIMATIONS TAB
+
 local change       = win:Server("Change Animations","")
 local animChannel = change:Channel("Change Animations")
 local animIDInput = ""
