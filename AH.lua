@@ -1,4 +1,4 @@
---// Arab Hoops (Hoops Demo) | Discord #steppin0nsteppas
+-- // Arab Hoops (Hoops Demo) | Discord #steppin0nsteppas
 
 -- FLAGS
 getgenv().InvDetect   = false
@@ -18,47 +18,29 @@ local StarterGui        = game:GetService("StarterGui")
 
 local player = Players.LocalPlayer
 
--- HITBOX EXPANDER
-local HitboxExpander = { _origSizes = {} }
-function HitboxExpander:Expand(part, scale)
-    if not part then return end
-    if not self._origSizes[part] then
-        self._origSizes[part] = part.Size
-    end
-    part.Size       = part.Size * scale
-    part.CanCollide = false
-    part.Transparency = 1
-end
-function HitboxExpander:Reset(part)
-    local orig = self._origSizes[part]
-    if orig then
-        part.Size       = orig
-        part.CanCollide = true
-        part.Transparency = 0
-        self._origSizes[part] = nil
-    end
-end
-
--- ANIMATION SETUP
+-- BALLCONTROL & ANIMS
 local function getBallControl()
     local char = player.Character or player.CharacterAdded:Wait()
     return char:WaitForChild("BallControl")
 end
-local bc = getBallControl()
-local stealAnims       = {bc["Defense - Client"].Steal.Left, bc["Defense - Client"].Steal.Right}
-local stealCooldown    = 1.3
-local lastSteal        = 0
+local bc             = getBallControl()
+local stealAnims     = { bc["Defense - Client"].Steal.Left, bc["Defense - Client"].Steal.Right }
+local stealCooldown  = 1.3
+local lastSteal      = 0
+
 local blockShotAnimObj = Instance.new("Animation")
 blockShotAnimObj.AnimationId = "rbxassetid://385554867"
 
 -- UI LIB
-local DiscordLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/UI-Libs/main/discord%20lib.txt"))()
+local DiscordLib = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/dawid-scripts/UI-Libs/main/discord%20lib.txt"
+))()
 local win   = DiscordLib:Window("Arabhoops")
 local home  = win:Server("Home", "")
 local lbls  = home:Channel("Hoops Discontinued")
-lbls:Label("By dawid#7205 & steppin0nsteppas")
-lbls:Seperator()
-lbls:Label("Fuck Synapse X lol - Hviqz")
+      lbls:Label("By dawid#7205 & steppin0nsteppas")
+      lbls:Seperator()
+      lbls:Label("Fuck Synapse X lol - Hviqz")
 
 local king   = win:Server("King", "")
 local assist = king:Channel("Assistment")
@@ -89,7 +71,8 @@ local function checkInvisibility()
                 return
             end
             for _, pl in ipairs(Players:GetPlayers()) do
-                if pl~=player and not exempt[pl.Name] and pl.Character and isCharInvisible(pl.Character) then
+                if pl~=player and not exempt[pl.Name]
+                and pl.Character and isCharInvisible(pl.Character) then
                     wait(10)
                     if not workspace:FindFirstChild("Basketball") then
                         player:Kick("Server is broken, some unemployed dude did it.")
@@ -113,61 +96,55 @@ function doInfstamina()
     end)
 end
 
-function doReach()
-    spawn(function()
-        while getgenv().Reach do
-            wait(0.1)
-            local now = os.clock()
-            if now - lastSteal < stealCooldown then continue end
-            local char = player.Character
-            local hrp  = char and char:FindFirstChild("HumanoidRootPart")
-            local hum  = char and char:FindFirstChildOfClass("Humanoid")
-            if hrp and hum then
-                for _, other in ipairs(Players:GetPlayers()) do
-                    if other~=player
-                    and other.Team~=player.Team
-                    and other.Character
-                    and other.Character:FindFirstChild("HumanoidRootPart")
-                    and (other.Character:FindFirstChild("Ball") or other.Character:FindFirstChild("Basketball")) then
-                        local dist = (other.Character.HumanoidRootPart.Position - hrp.Position).Magnitude
-                        if dist <= 5 then
-                            local anim = stealAnims[math.random(#stealAnims)]
-                            local track = hum:LoadAnimation(anim)
-                            track:Play()
-                            lastSteal = now
-                            break
-                        end
-                    end
-                end
-            end
+local originalArmSizes = {}
+local reachConn
+
+local function extendArms()
+    local char = player.Character
+    if not char then return end
+    for _, partName in ipairs({
+        "RightUpperArm","LeftUpperArm",
+        "RightLowerArm","LeftLowerArm",
+        "RightHand","LeftHand"
+    }) do
+        local arm = char:FindFirstChild(partName)
+        if arm and not originalArmSizes[arm] then
+            originalArmSizes[arm] = arm.Size
+            arm.Size = arm.Size * Vector3.new(2.4, 2.4, 2.4)
+            arm.LocalTransparencyModifier = 1
         end
-    end)
+    end
 end
 
+local function resetArms()
+    for arm, size in pairs(originalArmSizes) do
+        if arm and arm.Parent then
+            arm.Size = size
+            arm.LocalTransparencyModifier = 0
+        end
+    end
+    originalArmSizes = {}
+end
 
--- BLOCK SHOTS
+-- BLOCK SHOTS: Legit Blocks Only
 function doBlockShots()
-    local origSize = nil
     spawn(function()
         while getgenv().BlockShots do
             wait(0.1)
             local char = player.Character
-            if not char then continue end
-            local hrp = char:FindFirstChild("HumanoidRootPart")
-            local hum = char:FindFirstChildOfClass("Humanoid")
+            local hrp  = char and char:FindFirstChild("HumanoidRootPart")
+            local hum  = char and char:FindFirstChildOfClass("Humanoid")
             if not (hrp and hum) then continue end
+
             for _, other in ipairs(Players:GetPlayers()) do
                 if other~=player and other.Team~=player.Team and other.Character then
-                    local ballPart = other.Character:FindFirstChild("Ball") or other.Character:FindFirstChild("Basketball")
-                    if ballPart then
-                        local dist = (other.Character.HumanoidRootPart.Position - hrp.Position).Magnitude
-                        if dist <= 3 then
+                    local oppHRP   = other.Character:FindFirstChild("HumanoidRootPart")
+                    local ballPart = other.Character:FindFirstChild("Ball")
+                                  or other.Character:FindFirstChild("Basketball")
+                    if ballPart and oppHRP then
+                        local dist = (oppHRP.Position - hrp.Position).Magnitude
+                        if dist <= 5 then
                             hum:LoadAnimation(blockShotAnimObj):Play()
-                            if not origSize then origSize = hrp.Size end
-                            HitboxExpander:Expand(hrp,3)
-                            wait(0.15)
-                            HitboxExpander:Reset(hrp)
-                            origSize = nil
                             break
                         end
                     end
@@ -214,24 +191,31 @@ function doInbound()
     end)
 end
 
--- GOALTEND
+-- GOALTEND: Tween to rim, stops if you grab ball
 function doGoaltend()
+    local tweenSpeed = 0.1
+    local tweenInfo  = TweenInfo.new(tweenSpeed, Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
+
     local function hasBall(char)
         return char:FindFirstChild("Ball") or char:FindFirstChild("Basketball")
     end
+
     spawn(function()
         while getgenv().Goaltend do
             wait(0.04)
             local char = player.Character
             local ball = workspace:FindFirstChild("Basketball")
             if not (char and ball) then continue end
+            if hasBall(char) then continue end
+
             local hrp = char:FindFirstChild("HumanoidRootPart")
             if not hrp then continue end
-            for _, rc in ipairs(rimCFrames) do
-                local pDist = (hrp.Position - rc.Position).Magnitude
-                local bDist = (ball.Position - rc.Position).Magnitude
-                if pDist <= 4 and bDist <= 4 and not hasBall(char) then
-                    hrp.CFrame = CFrame.new(rc.Position)
+
+            for _, rimCF in ipairs(rimCFrames) do
+                local pDist = (hrp.Position - rimCF.Position).Magnitude
+                local bDist = (ball.Position - rimCF.Position).Magnitude
+                if pDist <= 5 and bDist <= 7 then
+                    TweenService:Create(hrp, tweenInfo, {CFrame = rimCF}):Play()
                     break
                 end
             end
@@ -239,7 +223,7 @@ function doGoaltend()
     end)
 end
 
--- PRELOAD GREEN SHOT ANIMATION
+-- PRELOAD GREEN SHOT
 local greenShotAnim = Instance.new("Animation")
 greenShotAnim.AnimationId = "rbxassetid://376938580"
 
@@ -256,10 +240,58 @@ assist:Toggle("Inf Stamina", false, function(b)
 end)
 assist:Seperator()
 
-assist:Toggle("Ball Reach", false, function(b)
-    getgenv().Reach = b
-    if b then doReach() end
+assist:Toggle("Ball Reach", false, function(enabled)
+    getgenv().Reach = enabled
+    if enabled then
+        extendArms()
+
+        -- Disconnect previous if it exists
+        if reachConn then
+            reachConn:Disconnect()
+        end
+
+        -- Every frame, try to steal if cooldown passed
+        reachConn = RunService.RenderStepped:Connect(function()
+            local now = os.clock()
+            if now - lastSteal < stealCooldown then return end
+
+            local char = player.Character
+            local hrp  = char and char:FindFirstChild("HumanoidRootPart")
+            local hum  = char and char:FindFirstChildOfClass("Humanoid")
+            if not (hrp and hum) then return end
+
+            for _, other in ipairs(Players:GetPlayers()) do
+                if other ~= player
+                and other.Team ~= player.Team
+                and other.Character then
+                    local oppHRP   = other.Character:FindFirstChild("HumanoidRootPart")
+                    local ballPart = other.Character:FindFirstChild("Ball")
+                                  or other.Character:FindFirstChild("Basketball")
+                    if oppHRP and ballPart then
+                        local dist = (oppHRP.Position - hrp.Position).Magnitude
+                        if dist <= 6 then
+                            local dir      = (oppHRP.Position - hrp.Position).Unit
+                            local rightDot = hrp.CFrame.RightVector:Dot(dir)
+                            local animObj  = (rightDot > 0) and stealAnims[2] or stealAnims[1]
+                            hum:LoadAnimation(animObj):Play()
+                            lastSteal = now
+                            break
+                        end
+                    end
+                end
+            end
+        end)
+
+    else
+        -- Toggled off: clean up
+        if reachConn then
+            reachConn:Disconnect()
+            reachConn = nil
+        end
+        resetArms()
+    end
 end)
+
 assist:Seperator()
 
 assist:Toggle("Block Shots", false, function(b)
@@ -270,7 +302,7 @@ assist:Seperator()
 
 assist:Toggle("Auto Inbound", false, function(b)
     getgenv().Inbound = b
-    doInbound()
+    if b then doInbound() end
 end)
 assist:Seperator()
 
@@ -280,15 +312,19 @@ assist:Toggle("Goal Tend", false, function(b)
 end)
 assist:Seperator()
 
--- Green Shot Button
+-- GREEN SHOT
 local _gsConn
 assist:Button("Green Shot", function()
     if _gsConn then
         _gsConn:Disconnect()
         _gsConn = nil
-        StarterGui:SetCore("SendNotification", {Title="Green Shot"; Text="Disabled"; Duration=2})
+        StarterGui:SetCore("SendNotification", {
+            Title="Green Shot"; Text="Disabled"; Duration=2
+        })
     else
-        StarterGui:SetCore("SendNotification", {Title="Green Shot"; Text="Press J for perfect shot"; Duration=2})
+        StarterGui:SetCore("SendNotification", {
+            Title="Green Shot"; Text="Press J for perfect shot"; Duration=2
+        })
         _gsConn = UserInputService.InputBegan:Connect(function(input, gp)
             if not gp and input.KeyCode == Enum.KeyCode.J then
                 local char = player.Character
@@ -303,54 +339,130 @@ assist:Button("Green Shot", function()
 end)
 assist:Seperator()
 
--- Power Dunk Button
+-- POWER DUNK
 assist:Button("Power Dunk", function()
     local Plr = Players.LocalPlayer
     if Plr.Character then
         for _, desc in ipairs(Plr.Character:GetDescendants()) do
             if desc:IsA("BasePart") then
-                desc.CustomPhysicalProperties = PhysicalProperties.new(100, 0.3, 0.5)
+                desc.CustomPhysicalProperties = PhysicalProperties.new(100,0.3,0.5)
             end
         end
     end
 end)
 assist:Label("Reset to remove power dunk")
+
 assist:Seperator()
 
--- CHANGE ANIMATIONS TAB
-local change = win:Server("Change Animations","")
-local an1mat0ins = change:Channel("Change Animations")
-local animIDInput = ""
-an1mat0ins:Textbox("Change Animation","Type Animation ID",true,function(t) animIDInput = t end)
-local animationMap = {
-    sidestep_right      = bc.Shooting.Stepback.sidestep_right,
-    sidestep_left       = bc.Shooting.Stepback.sidestep_left,
-    UnderhandLayup_Right= bc.Shooting.Animations.UnderhandLayup["Right Arm"],
-    UnderhandLayup_Left = bc.Shooting.Animations.UnderhandLayup["Left Arm"],
-    Layup_Right         = bc.Shooting.Animations.Layup["Right Arm"],
-    Layup_Left          = bc.Shooting.Animations.Layup["Left Arm"],
-    JumpShot_Left       = bc.Shooting.Animations.JumpShot["Left Arm"],
-    JumpShot_Right      = bc.Shooting.Animations.JumpShot["Right Arm"],
-    Dunk_Right          = bc.Shooting.Animations.Dunk["Right Arm"],
-    Dunk_Left           = bc.Shooting.Animations.Dunk["Left Arm"],
-    Overhead_Right      = bc["Passing - Client"].Overhead.Right,
-    Overhead_Left       = bc["Passing - Client"].Overhead.Left,
-    Chest_Right         = bc["Passing - Client"].Chest.Right,
-    Chest_Left          = bc["Passing - Client"].Chest.Left,
-    Dribble_Steal       = bc["Dribble - Client"].Right.Steal,
-    TripleThreat_Right  = bc["Dribble - Client"].Right.TripleThreat,
-    SwapHands_Right     = bc["Dribble - Client"].Right.SwapHands,
-    Dribble_Right       = bc["Dribble - Client"].Right.Dribble,
-    BTB_Right           = bc["Dribble - Client"].Right.BTB,
-    TripleThreat_Left   = bc["Dribble - Client"].Left.TripleThreat,
-    SwapHands_Left      = bc["Dribble - Client"].Left.SwapHands,
-    Dribble_Left        = bc["Dribble - Client"].Left.Dribble,
-    BTB_Left            = bc["Dribble - Client"].Left.BTB,
-    DefenseBlock        = bc["Defense - Client"].Block,
-    Steal_Right         = bc["Defense - Client"].Steal.Right,
-    Steal_Left          = bc["Defense - Client"].Steal.Left,
-}
-an1mat0ins:Dropdown("Choose Which Animation You Want To Switch.",{"sidestep_right","sidestep_left","UnderhandLayup_Right","UnderhandLayup_Left","Layup_Right","Layup_Left","JumpShot_Left","JumpShot_Right","Dunk_Right","Dunk_Left","Overhead_Right","Overhead_Left","Chest_Right","Chest_Left","Dribble_Steal","TripleThreat_Right","SwapHands_Right","Dribble_Right","BTB_Right","TripleThreat_Left","SwapHands_Left","Dribble_Left","BTB_Left","DefenseBlock","Steal_Right","Steal_Left"},function(opt)
-    local animObj = animationMap[opt]
-    if animObj and animIDInput~="" then animObj.AnimationId = "rbxassetid://"..animIDInput end
+assist:Button("FPS Boost", function()
+    local decalsyeeted = true
+    local g = game
+    local w = g.Workspace
+    local l = g.Lighting
+    local t = w.Terrain
+    t.WaterWaveSize     = 0
+    t.WaterWaveSpeed    = 0
+    t.WaterReflectance  = 0
+    t.WaterTransparency = 0
+    l.GlobalShadows     = false
+    l.FogEnd            = 9e9
+    l.Brightness        = 0
+    settings().Rendering.QualityLevel = "Level01"
+    for _, v in ipairs(g:GetDescendants()) do
+        if v:IsA("Part") or v:IsA("Union") 
+        or v:IsA("CornerWedgePart") or v:IsA("TrussPart") then
+            v.Material    = "Plastic"
+            v.Reflectance = 0
+        elseif (v:IsA("Decal") or v:IsA("Texture")) and decalsyeeted then
+            v.Transparency = 1
+        elseif v:IsA("ParticleEmitter") or v:IsA("Trail") then
+            v.Lifetime = NumberRange.new(0)
+        elseif v:IsA("Explosion") then
+            v.BlastPressure = 1
+            v.BlastRadius   = 1
+        elseif v:IsA("Fire") or v:IsA("SpotLight") or v:IsA("Smoke") then
+            v.Enabled = false
+        elseif v:IsA("MeshPart") then
+            v.Material    = "Plastic"
+            v.Reflectance = 0
+            v.TextureID   = 10385902758728957
+        end
+    end
+    for _, e in ipairs(l:GetChildren()) do
+        if e:IsA("BlurEffect") or e:IsA("SunRaysEffect")
+        or e:IsA("ColorCorrectionEffect") or e:IsA("BloomEffect")
+        or e:IsA("DepthOfFieldEffect") then
+            e.Enabled = false
+        end
+    end
 end)
+
+-- CHANGE ANIMATIONS TAB
+local change       = win:Server("Change Animations","")
+local animChannel = change:Channel("Change Animations")
+local animIDInput = ""
+
+animChannel:Textbox(
+    "Change Animation",
+    "Type Animation ID (with or without rbxassetid://)",
+    true,
+    function(t) animIDInput = t:match("%S+") or "" end
+)
+
+local animationMap = {
+    sidestep_right       = bc.Shooting.Stepback.sidestep_right,
+    sidestep_left        = bc.Shooting.Stepback.sidestep_left,
+    UnderhandLayup_Right = bc.Shooting.Animations.UnderhandLayup["Right Arm"],
+    UnderhandLayup_Left  = bc.Shooting.Animations.UnderhandLayup["Left Arm"],
+    Layup_Right          = bc.Shooting.Animations.Layup["Right Arm"],
+    Layup_Left           = bc.Shooting.Animations.Layup["Left Arm"],
+    JumpShot_Left        = bc.Shooting.Animations.JumpShot["Left Arm"],
+    JumpShot_Right       = bc.Shooting.Animations.JumpShot["Right Arm"],
+    Dunk_Right           = bc.Shooting.Animations.Dunk["Right Arm"],
+    Dunk_Left            = bc.Shooting.Animations.Dunk["Left Arm"],
+    Overhead_Right       = bc["Passing - Client"].Overhead.Right,
+    Overhead_Left        = bc["Passing - Client"].Overhead.Left,
+    Chest_Right          = bc["Passing - Client"].Chest.Right,
+    Chest_Left           = bc["Passing - Client"].Chest.Left,
+    Dribble_Steal        = bc["Dribble - Client"].Right.Steal,
+    TripleThreat_Right   = bc["Dribble - Client"].Right.TripleThreat,
+    SwapHands_Right      = bc["Dribble - Client"].Right.SwapHands,
+    Dribble_Right        = bc["Dribble - Client"].Right.Dribble,
+    BTB_Right            = bc["Dribble - Client"].Right.BTB,
+    TripleThreat_Left    = bc["Dribble - Client"].Left.TripleThreat,
+    SwapHands_Left       = bc["Dribble - Client"].Left.SwapHands,
+    Dribble_Left         = bc["Dribble - Client"].Left.Dribble,
+    BTB_Left             = bc["Dribble - Client"].Left.BTB,
+    DefenseBlock         = bc["Defense - Client"].Block,
+    Steal_Right          = bc["Defense - Client"].Steal.Right,
+    Steal_Left           = bc["Defense - Client"].Steal.Left,
+}
+
+animChannel:Dropdown(
+    "Choose Which Animation You Want To Switch.",
+    {
+      "sidestep_right","sidestep_left","UnderhandLayup_Right","UnderhandLayup_Left",
+      "Layup_Right","Layup_Left","JumpShot_Left","JumpShot_Right","Dunk_Right","Dunk_Left",
+      "Overhead_Right","Overhead_Left","Chest_Right","Chest_Left","Dribble_Steal",
+      "TripleThreat_Right","SwapHands_Right","Dribble_Right","BTB_Right",
+      "TripleThreat_Left","SwapHands_Left","Dribble_Left","BTB_Left",
+      "DefenseBlock","Steal_Right","Steal_Left"
+    },
+    function(opt)
+        local animObj = animationMap[opt]
+        if not animObj then return end
+        if animIDInput == "" then
+            warn("No ID typed!") return
+        end
+        local num = animIDInput:match("(%d+)")
+        if not num then
+            warn("Invalid ID format") return
+        end
+        animObj.AnimationId = "rbxassetid://" .. num
+        StarterGui:SetCore("SendNotification", {
+            Title    = "Animation Changed",
+            Text     = opt .. " → " .. num,
+            Duration = 2
+        })
+    end
+)
