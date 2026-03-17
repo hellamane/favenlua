@@ -172,41 +172,43 @@ tools:Button("Aimlock", function()
     Notify("Press G to toggle Aimlock")
 end)
 
-
 local ESPEnabled = false
 local espData = {}
 local espPlayerAddedConn
 
-local function clearESPForPlayer(plr)
+local function clearESP(plr)
     local data = espData[plr]
     if not data then return end
+
     if data.highlight then data.highlight:Destroy() end
     if data.bill then data.bill:Destroy() end
+
     if data.conns then
         for _, c in ipairs(data.conns) do
             if c.Disconnect then c:Disconnect() end
         end
     end
+
     if data.charConn and data.charConn.Disconnect then
         data.charConn:Disconnect()
     end
+
     espData[plr] = nil
 end
 
-local function applyESPToCharacter(plr, char)
+local function applyESP(plr, char)
     if not ESPEnabled then return end
     if plr == LocalPlayer then return end
+
+    clearESP(plr)
 
     local head = char:FindFirstChild("Head")
     local hum = char:FindFirstChildOfClass("Humanoid")
     if not head or not hum then return end
 
-    clearESPForPlayer(plr)
-
-    local color = plr.TeamColor and plr.TeamColor.Color or Color3.new(1, 1, 1)
+    local color = plr.TeamColor and plr.TeamColor.Color or Color3.new(1,1,1)
 
     local highlight = Instance.new("Highlight")
-    highlight.Name = "favenESP"
     highlight.FillTransparency = 0.7
     highlight.OutlineTransparency = 0
     highlight.FillColor = color
@@ -215,7 +217,6 @@ local function applyESPToCharacter(plr, char)
     highlight.Parent = char
 
     local bill = Instance.new("BillboardGui")
-    bill.Name = "favenESPBill"
     bill.Size = UDim2.new(0, 60, 0, 50)
     bill.StudsOffset = Vector3.new(0, 3, 0)
     bill.AlwaysOnTop = true
@@ -236,9 +237,16 @@ local function applyESPToCharacter(plr, char)
     updateText()
 
     local conns = {}
-    conns[#conns + 1] = hum.HealthChanged:Connect(updateText)
-    conns[#conns + 1] = plr:GetPropertyChangedSignal("TeamColor"):Connect(function()
-        local c = plr.TeamColor and plr.TeamColor.Color or Color3.new(1, 1, 1)
+
+    conns[#conns+1] = hum.HealthChanged:Connect(function()
+        updateText()
+        if hum.Health <= 0 then
+            clearESP(plr)
+        end
+    end)
+
+    conns[#conns+1] = plr:GetPropertyChangedSignal("TeamColor"):Connect(function()
+        local c = plr.TeamColor and plr.TeamColor.Color or Color3.new(1,1,1)
         highlight.FillColor = c
         highlight.OutlineColor = c
         label.TextColor3 = c
@@ -251,17 +259,17 @@ local function applyESPToCharacter(plr, char)
     }
 end
 
-local function setupESPForPlayer(plr)
+local function setupPlayer(plr)
     if plr == LocalPlayer then return end
     if not ESPEnabled then return end
 
     if plr.Character then
-        applyESPToCharacter(plr, plr.Character)
+        applyESP(plr, plr.Character)
     end
 
     local charConn = plr.CharacterAdded:Connect(function(char)
         char:WaitForChild("HumanoidRootPart", 5)
-        applyESPToCharacter(plr, char)
+        applyESP(plr, char)
     end)
 
     espData[plr] = espData[plr] or {}
@@ -273,15 +281,15 @@ local function enableESP()
     ESPEnabled = true
 
     for _, plr in ipairs(Players:GetPlayers()) do
-        setupESPForPlayer(plr)
+        setupPlayer(plr)
     end
 
     espPlayerAddedConn = Players.PlayerAdded:Connect(function(plr)
-        setupESPForPlayer(plr)
+        setupPlayer(plr)
     end)
 
     Players.PlayerRemoving:Connect(function(plr)
-        clearESPForPlayer(plr)
+        clearESP(plr)
     end)
 end
 
@@ -293,8 +301,8 @@ local function disableESP()
         espPlayerAddedConn = nil
     end
 
-    for plr, _ in pairs(espData) do
-        clearESPForPlayer(plr)
+    for plr in pairs(espData) do
+        clearESP(plr)
     end
 end
 
@@ -390,6 +398,10 @@ RunService.Heartbeat:Connect(function()
     hum.JumpPower = currentJP
 end)
 
+local loverbou = serv:Channel("Misc")
+
+local dummymansz = serv:Channel("Credits")
+
 local Teleports = win:Server("Teleports", "")
 local tpChannel = Teleports:Channel("Locations")
 
@@ -408,56 +420,56 @@ local teleportList = {
     ["Sniper Tower"] = CFrame.new(-297, 114, 2023),
     ["Sewer"] = CFrame.new(917, 79, 2109),
     ["Sewer 2"] = CFrame.new(917, 79, 2431),
-	["Neutral Spawn"] = CFrame.new(868, 40, 2342)
+    ["Neutral Spawn"] = CFrame.new(868, 40, 2342)
 }
 
-local dropdown = tpChannel:Dropdown(
-    "Teleport To:",
-    (function()
-        local keys = {}
-        for name, _ in pairs(teleportList) do
-            table.insert(keys, name)
-        end
-        return keys
-    end)(),
-    function(selected)
-        local cf = teleportList[selected]
-        if not cf then return end
+local keys = {}
+for name in pairs(teleportList) do
+    table.insert(keys, name)
+end
 
-        local char = LocalPlayer.Character
-        if not char then return end
-        local hrp = char:FindFirstChild("HumanoidRootPart")
-        if not hrp then return end
+local dropdown = tpChannel:Dropdown("Teleport To:", keys, function(selected)
+    local cf = teleportList[selected]
+    if not cf then return end
 
-        for _, part in ipairs(char:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = false
-            end
-        end
+    local char = LocalPlayer.Character
+    if not char then return end
 
-        local downTween = TweenService:Create(
-            hrp,
-            TweenInfo.new(0.35, Enum.EasingStyle.Linear),
-            {CFrame = hrp.CFrame * CFrame.new(0, -10, 0)}
-        )
-        downTween:Play()
-        downTween.Completed:Wait()
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
 
-        local tpTween = TweenService:Create(
-            hrp,
-            TweenInfo.new(2, Enum.EasingStyle.Linear),
-            {CFrame = cf}
-        )
-        tpTween:Play()
-        tpTween.Completed:Wait()
-
-        for _, part in ipairs(char:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = true
-            end
+    for _, part in ipairs(char:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.CanCollide = false
         end
     end
-)
+
+    local downTween = TweenService:Create(
+        hrp,
+        TweenInfo.new(0.35, Enum.EasingStyle.Linear),
+        {CFrame = hrp.CFrame * CFrame.new(0, -10, 0)}
+    )
+    downTween:Play()
+    downTween.Completed:Wait()
+
+    local distance = (hrp.Position - cf.Position).Magnitude
+    local speed = 60
+    local travelTime = math.clamp(distance / speed, 0.5, 6)
+
+    local tpTween = TweenService:Create(
+        hrp,
+        TweenInfo.new(travelTime, Enum.EasingStyle.Linear),
+        {CFrame = cf}
+    )
+    tpTween:Play()
+    tpTween.Completed:Wait()
+
+    for _, part in ipairs(char:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.CanCollide = true
+        end
+    end
+end)
 
 tpChannel:Button("Clear Teleports", function()
     teleportList = {}
@@ -467,10 +479,87 @@ end)
 tpChannel:Button("Add Custom CFrame", function()
     local char = LocalPlayer.Character
     if not char then return end
+
     local hrp = char:FindFirstChild("HumanoidRootPart")
     if not hrp then return end
 
     local name = "Custom_" .. tostring(math.random(1000, 9999))
     teleportList[name] = hrp.CFrame
     dropdown:Add(name)
+end)
+
+local tpChannel2 = Teleports:Channel("Players")
+
+
+local selectedPlayer = nil
+
+local playerDropdown = tpChannel2:Dropdown("Select A Player", {}, function(name)
+    selectedPlayer = name
+end)
+
+local function refreshPlayerList()
+    playerDropdown:Clear()
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer then
+            playerDropdown:Add(plr.Name)
+        end
+    end
+end
+
+refreshPlayerList()
+
+tpChannel2:Button("Refresh Playerlist", function()
+    refreshPlayerList()
+end)
+
+tpChannel2:Button("Teleport To Player", function()
+    if not selectedPlayer then
+        DiscordLib:Notification("faven.lua", "No player selected.", "Okay!")
+        return
+    end
+
+    local target = Players:FindFirstChild(selectedPlayer)
+    if not target or not target.Character then
+        DiscordLib:Notification("faven.lua", "Player not found.", "Okay!")
+        return
+    end
+
+    local char = LocalPlayer.Character
+    if not char then return end
+
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    local targetHRP = target.Character:FindFirstChild("HumanoidRootPart")
+    if not hrp or not targetHRP then return end
+
+    for _, part in ipairs(char:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.CanCollide = false
+        end
+    end
+
+    local downTween = TweenService:Create(
+        hrp,
+        TweenInfo.new(0.35, Enum.EasingStyle.Linear),
+        {CFrame = hrp.CFrame * CFrame.new(0, -10, 0)}
+    )
+    downTween:Play()
+    downTween.Completed:Wait()
+
+    local distance = (hrp.Position - targetHRP.Position).Magnitude
+    local speed = 60
+    local travelTime = math.clamp(distance / speed, 0.5, 6)
+
+    local tpTween = TweenService:Create(
+        hrp,
+        TweenInfo.new(travelTime, Enum.EasingStyle.Linear),
+        {CFrame = targetHRP.CFrame + Vector3.new(0, 3, 0)}
+    )
+    tpTween:Play()
+    tpTween.Completed:Wait()
+
+    for _, part in ipairs(char:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.CanCollide = true
+        end
+    end
 end)
