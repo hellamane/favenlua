@@ -34,12 +34,12 @@ local function enlargeHitboxes(char)
         local part = char:FindFirstChild(name)
         if part and part:IsA("BasePart") then
 
-            -- Save original size once
+
             if not OriginalSizes[part] then
                 OriginalSizes[part] = part.Size
             end
 
-            part.Size = Vector3.new(8, 8, 8) -- bigger hitbox
+            part.Size = Vector3.new(8, 8, 8)
             part.Transparency = 0.8
             part.CanCollide = false
             part.Massless = true
@@ -105,7 +105,6 @@ end)
 
 tools:Seperator()
 
-local KEYBIND = Enum.KeyCode.G
 local AimlockEnabled = true
 local Aiming = false
 local currentTarget = nil
@@ -158,20 +157,23 @@ local function GetClosestToMouse()
 end
 
 local function AimLock()
-    if not currentTarget or not IsValidTarget(currentTarget) then
-        currentTarget = GetClosestToMouse()
-    end
+    currentTarget = GetClosestToMouse()
 
     if currentTarget and IsValidTarget(currentTarget) then
         local cam = workspace.CurrentCamera
-        local head = currentTarget.Character.Head
-        cam.CFrame = CFrame.new(cam.CFrame.Position, head.Position)
+        cam.CFrame = CFrame.new(
+            cam.CFrame.Position,
+            currentTarget.Character.Head.Position
+        )
     end
 end
 
-UserInputService.InputBegan:Connect(function(input, gp)
-    if gp then return end
-    if input.KeyCode == KEYBIND and AimlockEnabled then
+tools:Bind(
+    "Aimlock",
+    Enum.KeyCode.RightShift,
+    function()
+        if not AimlockEnabled then return end
+
         Aiming = not Aiming
         toggleSound:Play()
 
@@ -182,18 +184,12 @@ UserInputService.InputBegan:Connect(function(input, gp)
             currentTarget = nil
         end
     end
-end)
+)
 
 RunService.RenderStepped:Connect(function()
     if Aiming and AimlockEnabled then
         AimLock()
     end
-end)
-
-tools:Seperator()
-
-tools:Button("Aimlock", function()
-    Notify("Press G to toggle Aimlock")
 end)
 
 tools:Seperator()
@@ -453,6 +449,119 @@ RunService.Heartbeat:Connect(function()
 end)
 
 local loverbou = serv:Channel("Misc")
+
+local KEYBIND = Enum.KeyCode.G
+local AimlockEnabled = true
+local Aiming = false
+local currentTarget = nil
+local lastAttacker = nil
+
+local toggleSound = Instance.new("Sound")
+toggleSound.SoundId = "rbxassetid://12221967"
+toggleSound.Volume = 1
+toggleSound.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+local function Notify(text)
+    pcall(function()
+        game:GetService("StarterGui"):SetCore("SendNotification", {
+            Title = "faven.lua",
+            Text = text,
+            Duration = 2
+        })
+    end)
+end
+
+local function IsValidTarget(plr)
+    if not plr or plr == LocalPlayer or not plr.Character then return false end
+    local hum = plr.Character:FindFirstChild("Humanoid")
+    local head = plr.Character:FindFirstChild("Head")
+    if not hum or not head or hum.Health <= 0 then return false end
+    if plr.Team == LocalPlayer.Team then return false end
+    return true
+end
+
+local function IsGuardOrCrim(plr)
+    if not plr.Team then return false end
+    local name = plr.Team.Name
+    return name == "Guards" or name == "Criminals"
+end
+
+local function GetClosestToMouseFiltered()
+    local cam = workspace.CurrentCamera
+    local mousePos = UserInputService:GetMouseLocation()
+    local closest, shortest = nil, math.huge
+
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if IsValidTarget(plr) then
+            if IsGuardOrCrim(plr) or plr == lastAttacker then
+                local head = plr.Character.Head
+                local screenPos, onScreen = cam:WorldToViewportPoint(head.Position)
+                if onScreen then
+                    local dist = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude
+                    if dist < shortest then
+                        shortest = dist
+                        closest = plr
+                    end
+                end
+            end
+        end
+    end
+
+    return closest
+end
+
+local function AimLock()
+    if lastAttacker and IsValidTarget(lastAttacker) then
+        currentTarget = lastAttacker
+    else
+        currentTarget = GetClosestToMouseFiltered()
+    end
+
+    if currentTarget and IsValidTarget(currentTarget) then
+        local cam = workspace.CurrentCamera
+        local head = currentTarget.Character.Head
+        cam.CFrame = CFrame.new(cam.CFrame.Position, head.Position)
+    end
+end
+
+LocalPlayer.CharacterAdded:Connect(function(char)
+    local hum = char:WaitForChild("Humanoid")
+    hum.HealthChanged:Connect(function()
+        if hum.Health < hum.MaxHealth then
+            local attacker = hum:FindFirstChild("creator")
+            if attacker and attacker.Value and attacker.Value ~= LocalPlayer then
+                lastAttacker = attacker.Value
+            end
+        end
+    end)
+end)
+
+loverbou:Bind(
+    "Guard/Crim Aimlock",
+    Enum.KeyCode.RightShift,
+    function()
+        if not AimlockEnabled then return end
+
+        Aiming = not Aiming
+        toggleSound:Play()
+
+        if Aiming then
+            Notify("Guard/Crim Aimlock Enabled")
+        else
+            Notify("Guard/Crim Aimlock Disabled")
+            currentTarget = nil
+            lastAttacker = nil
+        end
+    end
+)
+
+RunService.RenderStepped:Connect(function()
+    if Aiming and AimlockEnabled then
+        AimLock()
+    end
+end)
+
+loverbou:Seperator()
 
 loverbou:Toggle(
     "Anti AFK",
