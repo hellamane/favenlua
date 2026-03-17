@@ -612,15 +612,35 @@ loverbou:Toggle(
         if bool then
             _G.DayLoop = true
 
+            local Lighting = game:GetService("Lighting")
+
+            _G.OriginalBrightness = Lighting.Brightness
+            _G.OriginalClock = Lighting.ClockTime
+            _G.OriginalAmbient = Lighting.Ambient
+            _G.OriginalOutdoor = Lighting.OutdoorAmbient
+            _G.OriginalExposure = Lighting.ExposureCompensation
+
             task.spawn(function()
                 while _G.DayLoop do
-                    game:GetService("Lighting").ClockTime = 12
+                    Lighting.ClockTime = 12
+                    Lighting.Brightness = 2
+                    Lighting.Ambient = Color3.new(1,1,1)
+                    Lighting.OutdoorAmbient = Color3.new(1,1,1)
+                    Lighting.ExposureCompensation = 0
                     task.wait(0.1)
                 end
             end)
 
         else
             _G.DayLoop = false
+
+            local Lighting = game:GetService("Lighting")
+
+            Lighting.Brightness = _G.OriginalBrightness
+            Lighting.ClockTime = _G.OriginalClock
+            Lighting.Ambient = _G.OriginalAmbient
+            Lighting.OutdoorAmbient = _G.OriginalOutdoor
+            Lighting.ExposureCompensation = _G.OriginalExposure
         end
 
     end
