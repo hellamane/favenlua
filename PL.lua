@@ -685,36 +685,8 @@ dummymansz:Seperator()
 dummymansz:Label("Updated on 3/17/26 10:28PM")
 
 local Teleports = win:Server("Teleports", "")
+
 local tpChannel = Teleports:Channel("Locations")
-
-local function Notify(text)
-    pcall(function()
-        game:GetService("StarterGui"):SetCore("SendNotification", {
-            Title = "faven.lua",
-            Text = text,
-            Duration = 2
-        })
-    end)
-end
-
-local function ForceUnseat(char)
-    local hum = char:FindFirstChildOfClass("Humanoid")
-    if hum then
-        hum.Sit = false
-        hum.Jump = true
-    end
-end
-
-local function BlockSeating(char)
-    local hum = char:FindFirstChildOfClass("Humanoid")
-    if not hum then return end
-    hum:GetPropertyChangedSignal("Sit"):Connect(function()
-        hum.Sit = false
-    end)
-    hum:GetPropertyChangedSignal("SeatPart"):Connect(function()
-        hum.SeatPart = nil
-    end)
-end
 
 local teleportList = {
     ["Town Store"] = CFrame.new(438, 12, 1167),
@@ -741,16 +713,15 @@ for name in pairs(teleportList) do
     table.insert(keys, name)
 end
 
-local TweenService = game:GetService("TweenService")
+local dropdown = tpChannel:Dropdown("Teleport To:", keys, function(selected)
+    local cf = teleportList[selected]
+    if not cf then return end
 
-local function TeleportTo(cf)
     local char = LocalPlayer.Character
     if not char then return end
+
     local hrp = char:FindFirstChild("HumanoidRootPart")
     if not hrp then return end
-
-    BlockSeating(char)
-    ForceUnseat(char)
 
     for _, part in ipairs(char:GetDescendants()) do
         if part:IsA("BasePart") then
@@ -790,13 +761,7 @@ local function TeleportTo(cf)
                 part.CanCollide = true
             end
         end
-        ForceUnseat(char)
     end)
-end
-
-local dropdown = tpChannel:Dropdown("Teleport To:", keys, function(selected)
-    local cf = teleportList[selected]
-    if cf then TeleportTo(cf) end
 end)
 
 tpChannel:Seperator()
@@ -811,6 +776,7 @@ tpChannel:Seperator()
 tpChannel:Button("Add Custom CFrame", function()
     local char = LocalPlayer.Character
     if not char then return end
+
     local hrp = char:FindFirstChild("HumanoidRootPart")
     if not hrp then return end
 
@@ -852,11 +818,11 @@ tpChannel:Button("Grab Guns", function()
 
     local char = LocalPlayer.Character
     if not char then return end
+
     local hrp = char:FindFirstChild("HumanoidRootPart")
     if not hrp then return end
 
-    BlockSeating(char)
-    ForceUnseat(char)
+    local TweenService = game:GetService("TweenService")
 
     local originalCFrame = hrp.CFrame
     local targetPos = weaponLocations[selectedWeapon]
@@ -930,6 +896,4 @@ tpChannel:Button("Grab Guns", function()
             p.CanCollide = true
         end
     end
-
-    ForceUnseat(char)
 end)
