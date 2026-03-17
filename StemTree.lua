@@ -16,17 +16,27 @@ end
 
 if game.PlaceId == 1254185591 then
     executeScript("https://raw.githubusercontent.com/hellamane/favenlua/refs/heads/main/DLS.lua")
+
 elseif game.PlaceId == 116128963769069 then
     executeScript("https://raw.githubusercontent.com/hellamane/favenlua/refs/heads/main/ERX.lua")
+
 elseif game.PlaceId == 83898177072058 then
     executeScript("https://raw.githubusercontent.com/hellamane/favenlua/refs/heads/main/ORE.lua")
+
 elseif game.PlaceId == 360589910 then
     executeScript("https://raw.githubusercontent.com/hellamane/favenlua/refs/heads/main/AH.lua")
+
 elseif game.PlaceId == 86396300021430 then
     executeScript("https://raw.githubusercontent.com/hellamane/favenlua/refs/heads/main/RI.lua")
+
 elseif game.PlaceId == 11708967881 then
     executeScript("https://raw.githubusercontent.com/hellamane/favenlua/refs/heads/main/YAF.lua")
+
+elseif game.PlaceId == 155615604 then
+    executeScript("https://raw.githubusercontent.com/hellamane/favenlua/refs/heads/main/PL.lua")
+
 else
+    
     local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
     local Frame = Instance.new("Frame", ScreenGui)
     local TextBox = Instance.new("TextBox", Frame)
@@ -80,30 +90,40 @@ else
         if enterPressed then
             local input = TextBox.Text:lower()
 
-            if input == "dls" or input == "dominus" or input == "dominus lifting simulator" then
-                ScreenGui:Destroy()
-                TeleportService:Teleport(1254185591, LocalPlayer)
-            elseif input == "erx" or input == "eternal" or input == "eternal rarities x" then
-                ScreenGui:Destroy()
-                TeleportService:Teleport(116128963769069, LocalPlayer)
-            elseif input == "ore" or input == "ore mining" or input == "ore mining incremental" or input == "ore incremental" then
-                ScreenGui:Destroy()
-                TeleportService:Teleport(83898177072058, LocalPlayer)
-            elseif input == "rock" or input == "ri" or input == "rock inc" or input == "rock incremental" then
-                ScreenGui:Destroy()
-                TeleportService:Teleport(86396300021430, LocalPlayer)
-            elseif input == "ah" or input == "arab hoops" or input == "arab" or input == "hoops" then
-                ScreenGui:Destroy()
-                TeleportService:Teleport(360589910, LocalPlayer)
-            elseif input == "yaf" or input == "yeet" or input == "yeet a friend" or input == "yeeter" then
-                ScreenGui:Destroy()
-                TeleportService:Teleport(11708967881, LocalPlayer)
-            else
-                Notification.Text = "That script doesn't exist. Did you mean 'DLS', 'RI', 'ERX', 'AH', 'ORE' or 'YAF'?"
-                playDiscordSound()
-                wait(3)
-                Notification.Text = ""
+if input == "dls" or input == "dominus" or input == "dominus lifting simulator" then
+    ScreenGui:Destroy()
+    TeleportService:Teleport(1254185591, LocalPlayer)
+
+elseif input == "erx" or input == "eternal" or input == "eternal rarities x" then
+    ScreenGui:Destroy()
+    TeleportService:Teleport(116128963769069, LocalPlayer)
+
+elseif input == "ore" or input == "ore mining" or input == "ore mining incremental" or input == "ore incremental" then
+    ScreenGui:Destroy()
+    TeleportService:Teleport(83898177072058, LocalPlayer)
+
+elseif input == "rock" or input == "ri" or input == "rock inc" or input == "rock incremental" then
+    ScreenGui:Destroy()
+    TeleportService:Teleport(86396300021430, LocalPlayer)
+
+elseif input == "ah" or input == "arab hoops" or input == "arab" or input == "hoops" then
+    ScreenGui:Destroy()
+    TeleportService:Teleport(360589910, LocalPlayer)
+
+elseif input == "yaf" or input == "yeet" or input == "yeet a friend" or input == "yeeter" then
+    ScreenGui:Destroy()
+    TeleportService:Teleport(11708967881, LocalPlayer)
+
+elseif input == "pl" or input == "prison" or input == "prison life" or input == "prisonlife" then
+    ScreenGui:Destroy()
+    TeleportService:Teleport(155615604, LocalPlayer)
+
+else
+    Notification.Text = "That script doesn't exist. Did you mean 'DLS', 'RI', 'ERX', 'AH', 'ORE', 'YAF', or 'PL'?"
+    playDiscordSound()
+    wait(3)
+    Notification.Text = ""
+                end
             end
-        end
-    end)
+        end)
 end
