@@ -771,7 +771,7 @@ local dropdown = tpChannel:Dropdown("Teleport To:", keys, function(selected)
 
     TweenService:Create(
         hrp,
-        TweenInfo.new(0.5, Enum.EasingStyle.Linear),
+        TweenInfo.new(0.9, Enum.EasingStyle.Linear),
         {CFrame = cf + Vector3.new(0, 3, 0)}
     ):Play()
 
@@ -864,7 +864,7 @@ tpChannel:Button("Grab Guns", function()
 
     local undergroundTarget = CFrame.new(targetPos.X, targetPos.Y - 10, targetPos.Z)
     local distance = (hrp.Position - undergroundTarget.Position).Magnitude
-    local travelTime = math.clamp(distance / 45, 1, 10)
+    local travelTime = math.clamp(distance / 56, 1, 10)
 
     local tpTween = TweenService:Create(
         hrp,
