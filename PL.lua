@@ -276,7 +276,8 @@ local function applyESP(plr, char)
     espData[plr] = {
         highlight = highlight,
         bill = bill,
-        conns = conns
+        conns = conns,
+        character = char
     }
 end
 
@@ -323,16 +324,18 @@ local function enableESP()
                     local head = char:FindFirstChild("Head")
                     local hum = char:FindFirstChildOfClass("Humanoid")
 
-                    if head and hum and hum.Health > 0 then
-                        local data = espData[plr]
+                    local data = espData[plr]
 
-                        if not data
-                        or not data.highlight
-                        or not data.bill
-                        or data.highlight.Parent ~= char
-                        or data.bill.Parent ~= head then
-                            applyESP(plr, char)
-                        end
+                    if not data
+                    or data.character ~= char
+                    or not head
+                    or not hum
+                    or hum.Health <= 0
+                    or not data.highlight
+                    or not data.bill
+                    or data.highlight.Parent ~= char
+                    or data.bill.Parent ~= head then
+                        applyESP(plr, char)
                     end
                 end
             end
@@ -686,6 +689,8 @@ local Teleports = win:Server("Teleports", "")
 local tpChannel = Teleports:Channel("Locations")
 
 local teleportList = {
+    ["Town Store"] = CFrame.new(438, 12, 1167),
+    ["Secret Highway Room"] = CFrame.new(-36, 11, 1290),
     ["Cells"] = CFrame.new(919, 100, 2448),
     ["Guard Room"] = CFrame.new(817, 101, 2229),
     ["Waiting Room"] = CFrame.new(703, 100, 2247),
@@ -778,6 +783,119 @@ tpChannel:Button("Add Custom CFrame", function()
     local name = "Custom_" .. tostring(math.random(1000, 9999))
     teleportList[name] = hrp.CFrame
     dropdown:Add(name)
+end)
+
+tpChannel:Seperator()
+
+local weaponLocations = {
+    ["MP5 Guards"] = Vector3.new(813, 97, 2229),
+    ["Remington 870 Guards"] = Vector3.new(820, 97, 2229),
+    ["M4A1 Guards"] = Vector3.new(847, 97, 2229),
+    ["M700 Guards"] = Vector3.new(835, 97, 2229),
+    ["Remington 870 Crims"] = Vector3.new(-938, 91, 2039),
+    ["AK-47 Crims"] = Vector3.new(-931, 91, 2039),
+    ["M700 Crims"] = Vector3.new(-920, 91, 2036),
+    ["FAL Crims"] = Vector3.new(-902, 91, 2047)
+}
+
+local weaponNames = {}
+for name in pairs(weaponLocations) do
+    table.insert(weaponNames, name)
+end
+
+local selectedWeapon = nil
+
+local drop = tpChannel:Dropdown(
+    "Pick A Weapon",
+    weaponNames,
+    function(choice)
+        selectedWeapon = choice
+    end
+)
+
+tpChannel:Button("Grab Guns", function()
+    if not selectedWeapon then return end
+
+    local char = LocalPlayer.Character
+    if not char then return end
+
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+
+    local TweenService = game:GetService("TweenService")
+
+    local originalCFrame = hrp.CFrame
+    local targetPos = weaponLocations[selectedWeapon]
+    local targetCF = CFrame.new(targetPos)
+
+    for _, p in ipairs(char:GetDescendants()) do
+        if p:IsA("BasePart") then
+            p.CanCollide = false
+        end
+    end
+
+    local downTween = TweenService:Create(
+        hrp,
+        TweenInfo.new(0.35, Enum.EasingStyle.Linear),
+        {CFrame = hrp.CFrame * CFrame.new(0, -10, 0)}
+    )
+    downTween:Play()
+    downTween.Completed:Wait()
+
+    local undergroundTarget = CFrame.new(targetPos.X, targetPos.Y - 10, targetPos.Z)
+    local distance = (hrp.Position - undergroundTarget.Position).Magnitude
+    local travelTime = math.clamp(distance / 45, 1, 10)
+
+    local tpTween = TweenService:Create(
+        hrp,
+        TweenInfo.new(travelTime, Enum.EasingStyle.Linear),
+        {CFrame = undergroundTarget}
+    )
+    tpTween:Play()
+    tpTween.Completed:Wait()
+
+    local upTween = TweenService:Create(
+        hrp,
+        TweenInfo.new(0.4, Enum.EasingStyle.Linear),
+        {CFrame = targetCF + Vector3.new(0, 3, 0)}
+    )
+    upTween:Play()
+    upTween.Completed:Wait()
+
+    task.wait(0.25)
+
+    local downTween2 = TweenService:Create(
+        hrp,
+        TweenInfo.new(0.35, Enum.EasingStyle.Linear),
+        {CFrame = hrp.CFrame * CFrame.new(0, -10, 0)}
+    )
+    downTween2:Play()
+    downTween2.Completed:Wait()
+
+    local returnDistance = (hrp.Position - originalCFrame.Position).Magnitude
+    local returnTime = math.clamp(returnDistance / 45, 1, 10)
+
+    local returnTween = TweenService:Create(
+        hrp,
+        TweenInfo.new(returnTime, Enum.EasingStyle.Linear),
+        {CFrame = originalCFrame - Vector3.new(0, 10, 0)}
+    )
+    returnTween:Play()
+    returnTween.Completed:Wait()
+
+    local finalUp = TweenService:Create(
+        hrp,
+        TweenInfo.new(0.4, Enum.EasingStyle.Linear),
+        {CFrame = originalCFrame}
+    )
+    finalUp:Play()
+    finalUp.Completed:Wait()
+
+    for _, p in ipairs(char:GetDescendants()) do
+        if p:IsA("BasePart") then
+            p.CanCollide = true
+        end
+    end
 end)
 
 local tpChannel2 = Teleports:Channel("Players")
