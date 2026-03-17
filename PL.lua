@@ -412,11 +412,92 @@ end)
 
 local loverbou = serv:Channel("Misc")
 
+loverbou:Toggle(
+    "Anti AFK",
+    false,
+    function(bool)
+
+        if bool then
+            if _G.AntiAFKConnection then
+                _G.AntiAFKConnection:Disconnect()
+            end
+
+            _G.AntiAFKConnection = game:GetService("Players").LocalPlayer.Idled:Connect(function()
+                game:GetService("VirtualUser"):Button2Down(Vector2.new(), workspace.CurrentCamera.CFrame)
+                task.wait(1)
+                game:GetService("VirtualUser"):Button2Up(Vector2.new(), workspace.CurrentCamera.CFrame)
+            end)
+
+        else
+            if _G.AntiAFKConnection then
+                _G.AntiAFKConnection:Disconnect()
+                _G.AntiAFKConnection = nil
+            end
+        end
+
+    end
+)
+
+loverbou:Seperator()
+
+loverbou:Button(
+    "Boost FPS",
+    function()
+
+        local Lighting = game:GetService("Lighting")
+        local Terrain = workspace:FindFirstChildOfClass("Terrain")
+
+        for _, obj in ipairs(workspace:GetDescendants()) do
+            if obj:IsA("BasePart") then
+                obj.Material = Enum.Material.SmoothPlastic
+                obj.Reflectance = 0
+            elseif obj:IsA("Decal") or obj:IsA("Texture") then
+                obj.Transparency = 1
+            end
+        end
+
+        for _, obj in ipairs(workspace:GetDescendants()) do
+            if obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Fire") or obj:IsA("Smoke") then
+                obj.Enabled = false
+            end
+        end
+
+        Lighting.GlobalShadows = false
+        Lighting.FogEnd = 9e9
+        Lighting.Brightness = 1
+        Lighting.EnvironmentDiffuseScale = 0
+        Lighting.EnvironmentSpecularScale = 0
+
+        if Terrain then
+            Terrain.WaterWaveSize = 0
+            Terrain.WaterWaveSpeed = 0
+            Terrain.WaterReflectance = 0
+            Terrain.WaterTransparency = 1
+        end
+
+        for _, effect in ipairs(Lighting:GetChildren()) do
+            if effect:IsA("BlurEffect")
+            or effect:IsA("SunRaysEffect")
+            or effect:IsA("ColorCorrectionEffect")
+            or effect:IsA("BloomEffect")
+            or effect:IsA("DepthOfFieldEffect") then
+                effect.Enabled = false
+            end
+        end
+
+    end
+)
+
 local dummymansz = serv:Channel("Credits")
 
 dummymansz:Label("Made by hellamane/I92140I9/steppin0nsteppas")
 
+dummymansz:Seperator()
+
+dummymansz:Label("Updated on 3/17/26 10:28PM")
+
 local Teleports = win:Server("Teleports", "")
+
 local tpChannel = Teleports:Channel("Locations")
 
 local teleportList = {
@@ -466,29 +547,41 @@ local dropdown = tpChannel:Dropdown("Teleport To:", keys, function(selected)
     downTween:Play()
     downTween.Completed:Wait()
 
-    local distance = (hrp.Position - cf.Position).Magnitude
-    local speed = 60
-    local travelTime = math.clamp(distance / speed, 0.5, 6)
+    local undergroundTarget = CFrame.new(cf.X, cf.Y - 10, cf.Z)
+    local distance = (hrp.Position - undergroundTarget.Position).Magnitude
+    local travelTime = math.clamp(distance / 45, 1, 10)
 
     local tpTween = TweenService:Create(
         hrp,
         TweenInfo.new(travelTime, Enum.EasingStyle.Linear),
-        {CFrame = cf}
+        {CFrame = undergroundTarget}
     )
     tpTween:Play()
     tpTween.Completed:Wait()
 
-    for _, part in ipairs(char:GetDescendants()) do
-        if part:IsA("BasePart") then
-            part.CanCollide = true
+    TweenService:Create(
+        hrp,
+        TweenInfo.new(0.5, Enum.EasingStyle.Linear),
+        {CFrame = cf + Vector3.new(0, 3, 0)}
+    ):Play()
+
+    task.delay(0.6, function()
+        for _, part in ipairs(char:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = true
+            end
         end
-    end
+    end)
 end)
+
+tpChannel:Seperator()
 
 tpChannel:Button("Clear Teleports", function()
     teleportList = {}
     dropdown:Clear()
 end)
+
+tpChannel:Seperator()
 
 tpChannel:Button("Add Custom CFrame", function()
     local char = LocalPlayer.Character
@@ -563,21 +656,40 @@ tpChannel2:Button("Teleport To Player", function()
     downTween:Play()
     downTween.Completed:Wait()
 
-    local distance = (hrp.Position - targetHRP.Position).Magnitude
-    local speed = 60
-    local travelTime = math.clamp(distance / speed, 0.5, 6)
+    local running = true
 
-    local tpTween = TweenService:Create(
-        hrp,
-        TweenInfo.new(travelTime, Enum.EasingStyle.Linear),
-        {CFrame = targetHRP.CFrame + Vector3.new(0, 3, 0)}
-    )
-    tpTween:Play()
-    tpTween.Completed:Wait()
+    task.spawn(function()
+        while running and target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") do
+            local tHRP = target.Character.HumanoidRootPart
+            local distance = (hrp.Position - tHRP.Position).Magnitude
+            local travelTime = math.clamp(distance / 45, 0.5, 6)
 
-    for _, part in ipairs(char:GetDescendants()) do
-        if part:IsA("BasePart") then
-            part.CanCollide = true
+            local tpTween = TweenService:Create(
+                hrp,
+                TweenInfo.new(travelTime, Enum.EasingStyle.Linear),
+                {CFrame = CFrame.new(tHRP.Position.X, tHRP.Position.Y - 10, tHRP.Position.Z)}
+            )
+            tpTween:Play()
+            tpTween.Completed:Wait()
+
+            if distance < 6 then
+                running = false
+            end
         end
-    end
+
+        if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+            local finalHRP = target.Character.HumanoidRootPart
+            TweenService:Create(
+                hrp,
+                TweenInfo.new(0.5, Enum.EasingStyle.Linear),
+                {CFrame = finalHRP.CFrame + Vector3.new(0, 3, 0)}
+            ):Play()
+        end
+
+        for _, part in ipairs(char:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = true
+            end
+        end
+    end)
 end)
