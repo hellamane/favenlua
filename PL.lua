@@ -685,8 +685,36 @@ dummymansz:Seperator()
 dummymansz:Label("Updated on 3/17/26 10:28PM")
 
 local Teleports = win:Server("Teleports", "")
-
 local tpChannel = Teleports:Channel("Locations")
+
+local function Notify(text)
+    pcall(function()
+        game:GetService("StarterGui"):SetCore("SendNotification", {
+            Title = "faven.lua",
+            Text = text,
+            Duration = 2
+        })
+    end)
+end
+
+local function ForceUnseat(char)
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if hum then
+        hum.Sit = false
+        hum.Jump = true
+    end
+end
+
+local function BlockSeating(char)
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if not hum then return end
+    hum:GetPropertyChangedSignal("Sit"):Connect(function()
+        hum.Sit = false
+    end)
+    hum:GetPropertyChangedSignal("SeatPart"):Connect(function()
+        hum.SeatPart = nil
+    end)
+end
 
 local teleportList = {
     ["Town Store"] = CFrame.new(438, 12, 1167),
@@ -713,15 +741,16 @@ for name in pairs(teleportList) do
     table.insert(keys, name)
 end
 
-local dropdown = tpChannel:Dropdown("Teleport To:", keys, function(selected)
-    local cf = teleportList[selected]
-    if not cf then return end
+local TweenService = game:GetService("TweenService")
 
+local function TeleportTo(cf)
     local char = LocalPlayer.Character
     if not char then return end
-
     local hrp = char:FindFirstChild("HumanoidRootPart")
     if not hrp then return end
+
+    BlockSeating(char)
+    ForceUnseat(char)
 
     for _, part in ipairs(char:GetDescendants()) do
         if part:IsA("BasePart") then
@@ -761,7 +790,13 @@ local dropdown = tpChannel:Dropdown("Teleport To:", keys, function(selected)
                 part.CanCollide = true
             end
         end
+        ForceUnseat(char)
     end)
+end
+
+local dropdown = tpChannel:Dropdown("Teleport To:", keys, function(selected)
+    local cf = teleportList[selected]
+    if cf then TeleportTo(cf) end
 end)
 
 tpChannel:Seperator()
@@ -776,7 +811,6 @@ tpChannel:Seperator()
 tpChannel:Button("Add Custom CFrame", function()
     local char = LocalPlayer.Character
     if not char then return end
-
     local hrp = char:FindFirstChild("HumanoidRootPart")
     if not hrp then return end
 
@@ -818,11 +852,11 @@ tpChannel:Button("Grab Guns", function()
 
     local char = LocalPlayer.Character
     if not char then return end
-
     local hrp = char:FindFirstChild("HumanoidRootPart")
     if not hrp then return end
 
-    local TweenService = game:GetService("TweenService")
+    BlockSeating(char)
+    ForceUnseat(char)
 
     local originalCFrame = hrp.CFrame
     local targetPos = weaponLocations[selectedWeapon]
@@ -896,106 +930,6 @@ tpChannel:Button("Grab Guns", function()
             p.CanCollide = true
         end
     end
-end)
 
-local tpChannel2 = Teleports:Channel("Players")
-
-
-local selectedPlayer = nil
-
-local playerDropdown = tpChannel2:Dropdown("Select A Player", {}, function(name)
-    selectedPlayer = name
-end)
-
-local function refreshPlayerList()
-    playerDropdown:Clear()
-    for _, plr in ipairs(Players:GetPlayers()) do
-        if plr ~= LocalPlayer then
-            playerDropdown:Add(plr.Name)
-        end
-    end
-end
-
-refreshPlayerList()
-
-tpChannel2:Seperator()
-
-tpChannel2:Button("Refresh Playerlist", function()
-    refreshPlayerList()
-end)
-
-tpChannel2:Seperator()
-
-tpChannel2:Button("Teleport To Player", function()
-    if not selectedPlayer then
-        DiscordLib:Notification("faven.lua", "No player selected.", "Okay!")
-        return
-    end
-
-    local target = Players:FindFirstChild(selectedPlayer)
-    if not target or not target.Character then
-        DiscordLib:Notification("faven.lua", "Player not found.", "Okay!")
-        return
-    end
-
-    local char = LocalPlayer.Character
-    if not char then return end
-
-    local hrp = char:FindFirstChild("HumanoidRootPart")
-    local targetHRP = target.Character:FindFirstChild("HumanoidRootPart")
-    if not hrp or not targetHRP then return end
-
-    for _, part in ipairs(char:GetDescendants()) do
-        if part:IsA("BasePart") then
-            part.CanCollide = false
-        end
-    end
-
-    local downTween = TweenService:Create(
-        hrp,
-        TweenInfo.new(0.35, Enum.EasingStyle.Linear),
-        {CFrame = hrp.CFrame * CFrame.new(0, -10, 0)}
-    )
-    downTween:Play()
-    downTween.Completed:Wait()
-
-    local running = true
-
-    task.spawn(function()
-        while running and target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") do
-            local tHRP = target.Character.HumanoidRootPart
-            local undergroundPos = CFrame.new(tHRP.Position.X, tHRP.Position.Y - 10, tHRP.Position.Z)
-            local distance = (hrp.Position - tHRP.Position).Magnitude
-            local travelTime = math.clamp(distance / 45, 0.5, 6)
-
-            local tpTween = TweenService:Create(
-                hrp,
-                TweenInfo.new(travelTime, Enum.EasingStyle.Linear),
-                {CFrame = undergroundPos}
-            )
-            tpTween:Play()
-            tpTween.Completed:Wait()
-
-            if distance < 6 then
-                running = false
-            end
-        end
-
-        if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
-            local finalHRP = target.Character.HumanoidRootPart
-            TweenService:Create(
-                hrp,
-                TweenInfo.new(0.5, Enum.EasingStyle.Linear),
-                {CFrame = finalHRP.CFrame + Vector3.new(0, 3, 0)}
-            ):Play()
-        end
-
-        task.delay(0.6, function()
-            for _, part in ipairs(char:GetDescendants()) do
-                if part:IsA("BasePart") then
-                    part.CanCollide = true
-                end
-            end
-        end)
-    end)
+    ForceUnseat(char)
 end)
