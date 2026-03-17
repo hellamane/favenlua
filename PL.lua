@@ -103,6 +103,8 @@ tools:Toggle("Hitbox Extender", false, function(state)
     end
 end)
 
+tools:Seperator()
+
 local KEYBIND = Enum.KeyCode.G
 local AimlockEnabled = true
 local Aiming = false
@@ -114,7 +116,13 @@ toggleSound.Volume = 1
 toggleSound.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
 local function Notify(text)
-    DiscordLib:Notification("faven.lua", text, "Okay!")
+    pcall(function()
+        game:GetService("StarterGui"):SetCore("SendNotification", {
+            Title = "faven.lua",
+            Text = text,
+            Duration = 2
+        })
+    end)
 end
 
 local function IsValidTarget(plr)
@@ -145,14 +153,19 @@ local function GetClosestToMouse()
             end
         end
     end
+
     return closest
 end
 
 local function AimLock()
-    currentTarget = GetClosestToMouse()
+    if not currentTarget or not IsValidTarget(currentTarget) then
+        currentTarget = GetClosestToMouse()
+    end
+
     if currentTarget and IsValidTarget(currentTarget) then
         local cam = workspace.CurrentCamera
-        cam.CFrame = CFrame.new(cam.CFrame.Position, currentTarget.Character.Head.Position)
+        local head = currentTarget.Character.Head
+        cam.CFrame = CFrame.new(cam.CFrame.Position, head.Position)
     end
 end
 
@@ -160,12 +173,21 @@ UserInputService.InputBegan:Connect(function(input, gp)
     if gp then return end
     if input.KeyCode == KEYBIND and AimlockEnabled then
         Aiming = not Aiming
-        if not Aiming then currentTarget = nil end
+        toggleSound:Play()
+
+        if Aiming then
+            Notify("Aimlock Enabled")
+        else
+            Notify("Aimlock Disabled")
+            currentTarget = nil
+        end
     end
 end)
 
 RunService.RenderStepped:Connect(function()
-    if Aiming and AimlockEnabled then AimLock() end
+    if Aiming and AimlockEnabled then
+        AimLock()
+    end
 end)
 
 tools:Seperator()
@@ -179,6 +201,7 @@ tools:Seperator()
 local ESPEnabled = false
 local espData = {}
 local espPlayerAddedConn
+local espHeartbeat
 
 local function clearESP(plr)
     local data = espData[plr]
@@ -203,6 +226,7 @@ end
 local function applyESP(plr, char)
     if not ESPEnabled then return end
     if plr == LocalPlayer then return end
+    if not char then return end
 
     clearESP(plr)
 
@@ -244,9 +268,6 @@ local function applyESP(plr, char)
 
     conns[#conns+1] = hum.HealthChanged:Connect(function()
         updateText()
-        if hum.Health <= 0 then
-            clearESP(plr)
-        end
     end)
 
     conns[#conns+1] = plr:GetPropertyChangedSignal("TeamColor"):Connect(function()
@@ -295,6 +316,22 @@ local function enableESP()
     Players.PlayerRemoving:Connect(function(plr)
         clearESP(plr)
     end)
+
+    espHeartbeat = game:GetService("RunService").Heartbeat:Connect(function()
+        if not ESPEnabled then return end
+
+        for _, plr in ipairs(Players:GetPlayers()) do
+            if plr ~= LocalPlayer then
+                local char = plr.Character
+                if char then
+                    local data = espData[plr]
+                    if not data or not data.highlight or not data.bill then
+                        applyESP(plr, char)
+                    end
+                end
+            end
+        end
+    end)
 end
 
 local function disableESP()
@@ -303,6 +340,11 @@ local function disableESP()
     if espPlayerAddedConn then
         espPlayerAddedConn:Disconnect()
         espPlayerAddedConn = nil
+    end
+
+    if espHeartbeat then
+        espHeartbeat:Disconnect()
+        espHeartbeat = nil
     end
 
     for plr in pairs(espData) do
@@ -433,6 +475,30 @@ loverbou:Toggle(
                 _G.AntiAFKConnection:Disconnect()
                 _G.AntiAFKConnection = nil
             end
+        end
+
+    end
+)
+
+loverbou:Seperator()
+
+loverbou:Toggle(
+    "Loop DayTime",
+    false,
+    function(bool)
+
+        if bool then
+            _G.DayLoop = true
+
+            task.spawn(function()
+                while _G.DayLoop do
+                    game:GetService("Lighting").ClockTime = 12
+                    task.wait(0.1)
+                end
+            end)
+
+        else
+            _G.DayLoop = false
         end
 
     end
@@ -661,13 +727,14 @@ tpChannel2:Button("Teleport To Player", function()
     task.spawn(function()
         while running and target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") do
             local tHRP = target.Character.HumanoidRootPart
+            local undergroundPos = CFrame.new(tHRP.Position.X, tHRP.Position.Y - 10, tHRP.Position.Z)
             local distance = (hrp.Position - tHRP.Position).Magnitude
             local travelTime = math.clamp(distance / 45, 0.5, 6)
 
             local tpTween = TweenService:Create(
                 hrp,
                 TweenInfo.new(travelTime, Enum.EasingStyle.Linear),
-                {CFrame = CFrame.new(tHRP.Position.X, tHRP.Position.Y - 10, tHRP.Position.Z)}
+                {CFrame = undergroundPos}
             )
             tpTween:Play()
             tpTween.Completed:Wait()
@@ -686,10 +753,12 @@ tpChannel2:Button("Teleport To Player", function()
             ):Play()
         end
 
-        for _, part in ipairs(char:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = true
+        task.delay(0.6, function()
+            for _, part in ipairs(char:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = true
+                end
             end
-        end
+        end)
     end)
 end)
