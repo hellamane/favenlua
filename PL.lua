@@ -313,16 +313,26 @@ local function enableESP()
         clearESP(plr)
     end)
 
-    espHeartbeat = game:GetService("RunService").Heartbeat:Connect(function()
+    espHeartbeat = RunService.Heartbeat:Connect(function()
         if not ESPEnabled then return end
 
         for _, plr in ipairs(Players:GetPlayers()) do
             if plr ~= LocalPlayer then
                 local char = plr.Character
                 if char then
-                    local data = espData[plr]
-                    if not data or not data.highlight or not data.bill then
-                        applyESP(plr, char)
+                    local head = char:FindFirstChild("Head")
+                    local hum = char:FindFirstChildOfClass("Humanoid")
+
+                    if head and hum and hum.Health > 0 then
+                        local data = espData[plr]
+
+                        if not data
+                        or not data.highlight
+                        or not data.bill
+                        or data.highlight.Parent ~= char
+                        or data.bill.Parent ~= head then
+                            applyESP(plr, char)
+                        end
                     end
                 end
             end
