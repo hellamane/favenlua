@@ -168,9 +168,13 @@ RunService.RenderStepped:Connect(function()
     if Aiming and AimlockEnabled then AimLock() end
 end)
 
+tools:Seperator()
+
 tools:Button("Aimlock", function()
     Notify("Press G to toggle Aimlock")
 end)
+
+tools:Seperator()
 
 local ESPEnabled = false
 local espData = {}
@@ -310,6 +314,8 @@ tools:Toggle("ESP", false, function(state)
     if state then enableESP() else disableESP() end
 end)
 
+tools:Seperator()
+
 local InfJumpEnabled = false
 
 tools:Toggle("Infinite Jump", false, function(state)
@@ -327,6 +333,8 @@ UserInputService.JumpRequest:Connect(function()
         end
     end
 end)
+
+tools:Seperator()
 
 local NoCollideTools = false
 
@@ -363,6 +371,8 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
+tools:Seperator()
+
 local currentWS = 19
 local currentJP = 35
 
@@ -377,6 +387,8 @@ tools:Textbox("Walk Speed", "Enter a value between 16 and 33", true, function(te
     end
     currentWS = num
 end)
+
+tools:Seperator()
 
 tools:Textbox("Jump Power", "Enter a value between 24 and 110", true, function(text)
     local num = tonumber(text)
@@ -401,6 +413,8 @@ end)
 local loverbou = serv:Channel("Misc")
 
 local dummymansz = serv:Channel("Credits")
+
+dummymansz:Label("Made by hellamane/I92140I9/steppin0nsteppas")
 
 local Teleports = win:Server("Teleports", "")
 local tpChannel = Teleports:Channel("Locations")
@@ -508,9 +522,13 @@ end
 
 refreshPlayerList()
 
+tpChannel2:Seperator()
+
 tpChannel2:Button("Refresh Playerlist", function()
     refreshPlayerList()
 end)
+
+tpChannel2:Seperator()
 
 tpChannel2:Button("Teleport To Player", function()
     if not selectedPlayer then
