@@ -463,7 +463,9 @@ end)
 
 tools:Seperator()
 
---// VEHICLE FLY 
+--// QUEZ VEHICLE FLY — STABLE VERSION
+--// WASD, Shift Boost, Q/E Up-Down, Smooth Takeoff, Anti-Fling
+
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UIS = game:GetService("UserInputService")
@@ -473,43 +475,64 @@ local char = player.Character or player.CharacterAdded:Wait()
 local humanoid = char:WaitForChild("Humanoid")
 local root = char:WaitForChild("HumanoidRootPart")
 
-local flying = false
+local flyEnabled = false
 local currentSeat = nil
 local vehicle = nil
 
 local BASE_SPEED = 60
 local BOOST_SPEED = 120
 local VERTICAL_SPEED = 45
-local FLY_HEIGHT = 30
-local smoothLift = 0
+local TARGET_HOVER = 30
+
+local currentHover = 0
+local baseY = nil
+local extraHeight = 0
 
 local keys = {W=false,A=false,S=false,D=false,Q=false,E=false,Shift=false}
 
 UIS.InputBegan:Connect(function(i,g)
 	if g then return end
-	local name = i.KeyCode.Name
-	if keys[name] ~= nil then keys[name] = true end
+	local kc = i.KeyCode
+	if kc == Enum.KeyCode.W then keys.W = true end
+	if kc == Enum.KeyCode.A then keys.A = true end
+	if kc == Enum.KeyCode.S then keys.S = true end
+	if kc == Enum.KeyCode.D then keys.D = true end
+	if kc == Enum.KeyCode.Q then keys.Q = true end
+	if kc == Enum.KeyCode.E then keys.E = true end
+	if kc == Enum.KeyCode.LeftShift or kc == Enum.KeyCode.RightShift then keys.Shift = true end
 end)
 
 UIS.InputEnded:Connect(function(i)
-	local name = i.KeyCode.Name
-	if keys[name] ~= nil then keys[name] = false end
+	local kc = i.KeyCode
+	if kc == Enum.KeyCode.W then keys.W = false end
+	if kc == Enum.KeyCode.A then keys.A = false end
+	if kc == Enum.KeyCode.S then keys.S = false end
+	if kc == Enum.KeyCode.D then keys.D = false end
+	if kc == Enum.KeyCode.Q then keys.Q = false end
+	if kc == Enum.KeyCode.E then keys.E = false end
+	if kc == Enum.KeyCode.LeftShift or kc == Enum.KeyCode.RightShift then keys.Shift = false end
 end)
 
 humanoid.Seated:Connect(function(active, seat)
 	if active then
 		currentSeat = seat
 		vehicle = seat:FindFirstAncestorWhichIsA("Model")
-		if vehicle and not vehicle.PrimaryPart then vehicle.PrimaryPart = seat end
+		if vehicle and not vehicle.PrimaryPart then
+			vehicle.PrimaryPart = seat
+		end
+		currentHover = 0
+		extraHeight = 0
+		if flyEnabled and vehicle and vehicle.PrimaryPart then
+			baseY = vehicle.PrimaryPart.Position.Y
+		end
 	else
 		currentSeat = nil
 		vehicle = nil
-		flying = false
-		smoothLift = 0
+		baseY = nil
+		currentHover = 0
+		extraHeight = 0
 	end
 end)
-
-local function lerp(a,b,t) return a + (b-a)*t end
 
 local function stabilize(model)
 	for _,p in ipairs(model:GetDescendants()) do
@@ -521,19 +544,27 @@ local function stabilize(model)
 end
 
 RunService.RenderStepped:Connect(function(dt)
+	if not flyEnabled then return end
 	if not vehicle or not vehicle.PrimaryPart or not currentSeat then return end
-
 	local cam = workspace.CurrentCamera
-	local look = cam.CFrame.LookVector
-	local primary = vehicle.PrimaryPart
+	if not cam then return end
 
-	if flying then
-		smoothLift = math.clamp(smoothLift + dt*2.5, 0, 1)
-	else
-		smoothLift = math.clamp(smoothLift - dt*3, 0, 1)
+	local primary = vehicle.PrimaryPart
+	if not baseY then
+		baseY = primary.Position.Y
 	end
 
-	local targetPos = primary.Position + Vector3.new(0, lerp(0, FLY_HEIGHT, smoothLift), 0)
+	currentHover = math.clamp(currentHover + dt * 2.5, 0, TARGET_HOVER)
+
+	-- vertical control
+	if keys.Q then
+		extraHeight = extraHeight + VERTICAL_SPEED * dt
+	end
+	if keys.E then
+		extraHeight = extraHeight - VERTICAL_SPEED * dt
+	end
+
+	local targetY = baseY + currentHover + extraHeight
 
 	local speed = keys.Shift and BOOST_SPEED or BASE_SPEED
 	local move = Vector3.zero
@@ -542,27 +573,32 @@ RunService.RenderStepped:Connect(function(dt)
 	if keys.S then move -= cam.CFrame.LookVector end
 	if keys.A then move -= cam.CFrame.RightVector end
 	if keys.D then move += cam.CFrame.RightVector end
-	if keys.Q then move += Vector3.new(0, VERTICAL_SPEED * dt, 0) end
-	if keys.E then move -= Vector3.new(0, VERTICAL_SPEED * dt, 0) end
 
-	if move.Magnitude > 0 then
-		if move.Y == 0 then
-			move = move.Unit * speed * dt
-		end
+	local horiz = Vector3.new(move.X, 0, move.Z)
+	if horiz.Magnitude > 0 then
+		horiz = horiz.Unit * speed * dt
 	end
 
-	targetPos += move
+	local pos = primary.Position
+	pos = Vector3.new(pos.X, targetY, pos.Z) + Vector3.new(horiz.X, 0, horiz.Z)
 
-	vehicle:SetPrimaryPartCFrame(CFrame.new(targetPos, targetPos + look))
+	local look = cam.CFrame.LookVector
+	vehicle:SetPrimaryPartCFrame(CFrame.new(pos, pos + look))
 	stabilize(vehicle)
 end)
 
-
 tools:Toggle("Vehicle Fly", false, function(bool)
-	if bool and currentSeat then
-		flying = true
+	flyEnabled = bool
+	if not flyEnabled then
+		baseY = nil
+		currentHover = 0
+		extraHeight = 0
 	else
-		flying = false
+		if vehicle and vehicle.PrimaryPart then
+			baseY = vehicle.PrimaryPart.Position.Y
+			currentHover = 0
+			extraHeight = 0
+		end
 	end
 end)
 
