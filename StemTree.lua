@@ -14,6 +14,7 @@ local function executeScript(scriptUrl)
     end
 end
 
+
 if game.PlaceId == 1254185591 then
     executeScript("https://raw.githubusercontent.com/hellamane/favenlua/refs/heads/main/DLS.lua")
 
@@ -34,6 +35,11 @@ elseif game.PlaceId == 11708967881 then
 
 elseif game.PlaceId == 155615604 then
     executeScript("https://raw.githubusercontent.com/hellamane/favenlua/refs/heads/main/PL.lua")
+
+
+elseif game.PlaceId == 98388247482875 then
+    executeScript("https://raw.githubusercontent.com/hellamane/favenlua/refs/heads/main/ASCI.lua")
+
 
 else
     
@@ -118,12 +124,17 @@ elseif input == "pl" or input == "prison" or input == "prison life" or input == 
     ScreenGui:Destroy()
     TeleportService:Teleport(155615604, LocalPlayer)
 
+elseif input == "asci" or input == "ascension" or input == "ascension incremental" then
+    ScreenGui:Destroy()
+    TeleportService:Teleport(98388247482875, LocalPlayer)
+
 else
-    Notification.Text = "That script doesn't exist. Did you mean 'DLS', 'RI', 'ERX', 'AH', 'ORE', 'YAF', or 'PL'?"
+    Notification.Text = "That script doesn't exist. Did you mean 'DLS', 'RI', 'ERX', 'AH', 'ORE', 'YAF', 'PL', or 'ASCI'?"
     playDiscordSound()
     wait(3)
     Notification.Text = ""
-                end
-            end
-        end)
+end
+
+        end
+    end)
 end
