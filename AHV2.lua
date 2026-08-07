@@ -1,5 +1,4 @@
-local DiscordLib =
-    loadstring(game:HttpGet "https://raw.githubusercontent.com/bloodball/-back-ups-for-libs/main/discord")()
+local DiscordLib = loadstring(game:HttpGet"https://raw.githubusercontent.com/dawid-scripts/UI-Libs/main/discord%20lib.txt")()
 local win    = DiscordLib:Window("arab hoops part 2??")
 local serv   = win:Server("Secret UI", "")
 local nerdd  = serv:Channel("Assistment")
