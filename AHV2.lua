@@ -2,17 +2,17 @@ local DiscordLib = loadstring(game:HttpGet"https://raw.githubusercontent.com/daw
 local win    = DiscordLib:Window("arab hoops part 2??")
 local serv   = win:Server("Secret UI", "")
 local nerdd  = serv:Channel("Assistment")
-local tgls   = nerdd   -- for toggles
-local sldrs  = nerdd   -- for sliders
+local tgls   = nerdd  
+local sldrs  = nerdd 
 
--- SERVICES
+
 local UserInputService    = game:GetService("UserInputService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
 local StarterGui          = game:GetService("StarterGui")
 local RunService          = game:GetService("RunService")
 local Players             = game:GetService("Players")
 
--- STATE
+
 local aimbotEnabled   = false
 local firstToggle     = true
 local goaltendConn    = nil
@@ -20,7 +20,7 @@ local walkSpeed       = 16
 local reachOrigProps  = {}
 local reachEnabled    = false
 
--- UTILITY: badge notification
+
 local function sendBadge(title, text)
     StarterGui:SetCore("SendNotification", {
         Title    = title;
@@ -29,7 +29,7 @@ local function sendBadge(title, text)
     })
 end
 
--- AIMBOT BUTTON
+
 nerdd:Button("Aimbot", function()
     aimbotEnabled = not aimbotEnabled
     if aimbotEnabled then
@@ -48,7 +48,7 @@ tgls:Toggle("Goaltend", false, function(enabled)
     if enabled then
         sendBadge("Arab Hoops", "Goaltend has been turned on")
 
-        -- wait for court, hoop, rim, and ball to exist
+
         local courts = workspace:WaitForChild("Courts", 5)
         local court  = courts:WaitForChild("Basketball Court 1", 5)
         local hoop   = court:WaitForChild("Home Hoop", 5)
@@ -69,15 +69,15 @@ tgls:Toggle("Goaltend", false, function(enabled)
             if dBR <= 4 and dPB <= 6 then
                 debounce = true
 
-                -- teleport into position
+
                 hrp.CFrame = CFrame.new(-6, 12, 10)
 
-                -- shoot
+
                 VirtualInputManager:SendKeyEvent(true, "R", false, game)
                 wait(0.38)
                 VirtualInputManager:SendKeyEvent(false, "R", false, game)
 
-                -- wait until ball leaves rim area
+
                 repeat
                     RunService.RenderStepped:Wait()
                     dBR = (ball.Position - rim.Position).Magnitude
@@ -98,7 +98,7 @@ end)
 
 
 
--- WALK-SPEED SLIDER
+
 sldrs:Slider(
     "Loop Walkspeed",
     0,
@@ -109,7 +109,7 @@ sldrs:Slider(
     end
 )
 
--- enforce walkspeed
+
 RunService.RenderStepped:Connect(function()
     local pl  = Players.LocalPlayer
     local char = pl.Character
@@ -119,7 +119,7 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- REACH TOGGLE
+
 tgls:Toggle("Reach", false, function(state)
     reachEnabled = state
     local pl   = Players.LocalPlayer
@@ -127,7 +127,7 @@ tgls:Toggle("Reach", false, function(state)
 
     if state then
         sendBadge("Arab Hoops", "Reach has been turned on")
-        -- expand every BasePart in the character
+
         for _, part in ipairs(char:GetDescendants()) do
             if part:IsA("BasePart") then
                 reachOrigProps[part] = {
@@ -142,7 +142,7 @@ tgls:Toggle("Reach", false, function(state)
         end
     else
         sendBadge("Arab Hoops", "Reach has been turned off")
-        -- restore original properties
+
         for part, props in pairs(reachOrigProps) do
             if part and part.Parent then
                 part.Size         = props.Size
@@ -154,7 +154,7 @@ tgls:Toggle("Reach", false, function(state)
     end
 end)
 
--- AIMBOT KEY-HOOK
+
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     if input.UserInputType == Enum.UserInputType.Keyboard
