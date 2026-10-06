@@ -195,8 +195,8 @@ automationz:Toggle(
                                     local enemyRoot = player.Character.HumanoidRootPart
                                     local dist = (enemyRoot.Position - myPos).Magnitude
 
-                                    if dist <= 7 then
-                                        local targetCFrame = enemyRoot.CFrame * CFrame.new(0, 5, 3)
+                                    if dist <= 10 then
+                                        local targetCFrame = enemyRoot.CFrame * CFrame.new(0, 5, 5)
                                         LocalPlayer.Character.HumanoidRootPart.CFrame = targetCFrame
                                         LocalPlayer.Character.HumanoidRootPart.AssemblyLinearVelocity = Vector3.zero
                                     end
