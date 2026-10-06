@@ -36,10 +36,11 @@ elseif game.PlaceId == 11708967881 then
 elseif game.PlaceId == 155615604 then
     executeScript("https://raw.githubusercontent.com/hellamane/favenlua/refs/heads/main/PL.lua")
 
-
 elseif game.PlaceId == 98388247482875 then
     executeScript("https://raw.githubusercontent.com/hellamane/favenlua/refs/heads/main/ASCI.lua")
 
+elseif game.PlaceId == 2961583129 then
+    executeScript("https://raw.githubusercontent.com/hellamane/favenlua/refs/heads/main/PTB.lua")
 
 else
     
@@ -128,8 +129,12 @@ elseif input == "asci" or input == "ascension" or input == "ascension incrementa
     ScreenGui:Destroy()
     TeleportService:Teleport(98388247482875, LocalPlayer)
 
+elseif input == "ptb" or input == "pass the bomb" or input == "bomb" then
+    ScreenGui:Destroy()
+    TeleportService:Teleport(2961583129, LocalPlayer)
+
 else
-    Notification.Text = "That script doesn't exist. Did you mean 'DLS', 'RI', 'ERX', 'AH', 'ORE', 'YAF', 'PL', or 'ASCI'?"
+    Notification.Text = "That script doesn't exist. Did you mean 'DLS', 'RI', 'ERX', 'AH', 'ORE', 'YAF', 'PL', 'ASCI', or 'PTB'?"
     playDiscordSound()
     wait(3)
     Notification.Text = ""
