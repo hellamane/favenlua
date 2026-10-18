@@ -174,6 +174,36 @@ automationz:Toggle(
 
 automationz:Seperator()
 
+local Config = {
+    StudsBehind = 8,
+    Smoothing = 0.2
+}
+
+local function getBombCarrier()
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character then
+            local char = player.Character
+            local targetFolder = workspace:FindFirstChild(player.Name)
+            local targetHasBomb = (char:FindFirstChild("Bomb") ~= nil) or 
+                                  (targetFolder and targetFolder:FindFirstChild("GotBombValue") and targetFolder.GotBombValue.Value)
+            if targetHasBomb then
+                return player
+            end
+            
+            if player.Backpack and player.Backpack:FindFirstChild("Bomb") then
+                return player
+            end
+            
+            for _, item in ipairs(char:GetChildren()) do
+                if item:IsA("Tool") and (string.find(string.lower(item.Name), "bomb") or string.find(string.lower(item.Name), "potato")) then
+                    return player
+                end
+            end
+        end
+    end
+    return nil
+end
+
 automationz:Toggle(
     "Avoid Bomb",
     false,
@@ -182,25 +212,22 @@ automationz:Toggle(
         if avoidBombEnabled then
             task.spawn(function()
                 while avoidBombEnabled and activeLoops.Running do
-                    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                        local myPos = LocalPlayer.Character.HumanoidRootPart.Position
-
-                        for _, player in ipairs(Players:GetPlayers()) do
-                            if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-                                local targetFolder = workspace:FindFirstChild(player.Name)
-                                local targetHasBomb = (player.Character:FindFirstChild("Bomb") ~= nil) or 
-                                                      (targetFolder and targetFolder:FindFirstChild("GotBombValue") and targetFolder.GotBombValue.Value)
-
-                                if targetHasBomb then
-                                    local enemyRoot = player.Character.HumanoidRootPart
-                                    local dist = (enemyRoot.Position - myPos).Magnitude
-
-                                    if dist <= 10 then
-                                        local targetCFrame = enemyRoot.CFrame * CFrame.new(0, 5, 5)
-                                        LocalPlayer.Character.HumanoidRootPart.CFrame = targetCFrame
-                                        LocalPlayer.Character.HumanoidRootPart.AssemblyLinearVelocity = Vector3.zero
-                                    end
-                                end
+                    local char = LocalPlayer.Character
+                    if char and char:FindFirstChild("HumanoidRootPart") and char:FindFirstChild("Humanoid") then
+                        local rootPart = char.HumanoidRootPart
+                        local bombCarrier = getBombCarrier()
+                        
+                        if bombCarrier and bombCarrier.Character and bombCarrier.Character:FindFirstChild("HumanoidRootPart") then
+                            local carrierRoot = bombCarrier.Character.HumanoidRootPart
+                            local currentDistance = (rootPart.Position - carrierRoot.Position).Magnitude
+                            
+                            if currentDistance <= Config.StudsBehind then
+                                local targetCFrame = carrierRoot.CFrame * CFrame.new(0, 0, Config.StudsBehind)
+                                local targetPos = targetCFrame.Position
+                                local groundY = rootPart.Position.Y
+                                local finalTarget = Vector3.new(targetPos.X, groundY, targetPos.Z)
+                                
+                                rootPart.CFrame = rootPart.CFrame:Lerp(CFrame.new(finalTarget, Vector3.new(carrierRoot.Position.X, groundY, carrierRoot.Position.Z)), Config.Smoothing)
                             end
                         end
                     end
@@ -263,52 +290,6 @@ playertweaking:Toggle(
                     task.wait(0.1)
                 end
             end)
-        end
-    end
-)
-
-playertweaking:Seperator()
-
-local noclipEnabled = false
-local noclipConn = nil
-
-playertweaking:Toggle(
-    "Noclip",
-    false,
-    function(bool)
-        noclipEnabled = bool
-        if noclipEnabled then
-            sendNotification("Make sure you don't noclip out the map or you'll be kicked/killed")
-            noclipConn = RunService.Stepped:Connect(function()
-                if LocalPlayer.Character then
-                    for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
-                        if part:IsA("BasePart") then
-                            part.CanCollide = false
-                        end
-                    end
-                end
-            end)
-            table.insert(activeConnections, noclipConn)
-        else
-            if noclipConn then
-                noclipConn:Disconnect()
-                noclipConn = nil
-            end
-        end
-    end
-)
-
-playertweaking:Seperator()
-
-local infJumpEnabled = false
-
-playertweaking:Toggle(
-    "Inf Jump",
-    false,
-    function(bool)
-        infJumpEnabled = bool
-        if infJumpEnabled then
-            sendNotification("Make sure you don't jump too high or you'll be kicked/killed")
         end
     end
 )
@@ -382,13 +363,6 @@ playertweaking:Toggle(
     end
 )
 
-local jumpConn = UserInputService.JumpRequest:Connect(function()
-    if infJumpEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
-        LocalPlayer.Character:FindFirstChildOfClass("Humanoid"):ChangeState(Enum.HumanoidStateType.Jumping)
-    end
-end)
-table.insert(activeConnections, jumpConn)
-
 local settingsChan = serv:Channel("Settings")
 
 local antiAfkConn = nil
@@ -450,7 +424,7 @@ settingsChan:Button(
             elseif descendant:IsA("SpecialMesh") then
                 descendant.TextureId = ""
             elseif descendant:IsA("ParticleEmitter") or descendant:IsA("Trail") 
-                   or descendant:IsA("Smoke") or descendant:IsA("Fire") or descendant:IsA("Sparkles") then
+                     or descendant:IsA("Smoke") or descendant:IsA("Fire") or descendant:IsA("Sparkles") then
                 descendant.Enabled = false
             end
         end
