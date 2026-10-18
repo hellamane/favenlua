@@ -1,12 +1,11 @@
--- // Arab Hoops (Hoops Demo) | Discord #steppin0nsteppas
-
+-- // Arab Hoops (Hoops Demo)
 -- FLAGS
-getgenv().InvDetect   = false
-getgenv().Infstamina  = false
-getgenv().Reach       = false
-getgenv().BlockShots  = false
-getgenv().Inbound     = false
-getgenv().Goaltend    = false
+getgenv().FlingInbounder = false
+getgenv().Infstamina     = false
+getgenv().Reach          = false
+getgenv().BlockShots     = false
+getgenv().Inbound        = false
+getgenv().Goaltend       = false
 
 -- SERVICES
 local Players           = game:GetService("Players")
@@ -25,12 +24,11 @@ local function getBallControl()
 end
 local bc             = getBallControl()
 local stealAnims     = { bc["Defense - Client"].Steal.Left, bc["Defense - Client"].Steal.Right }
-local stealCooldown  = 1.3
+local stealCooldown  = 1.0
 local lastSteal      = 0
 
 local blockShotAnimObj = Instance.new("Animation")
 blockShotAnimObj.AnimationId = "rbxassetid://385554867"
-
 
 local DiscordLib = loadstring(game:HttpGet(
     "https://raw.githubusercontent.com/dawid-scripts/UI-Libs/main/discord%20lib.txt"
@@ -40,55 +38,61 @@ local home  = win:Server("Home", "")
 local lbls  = home:Channel("Hoops Discontinued")
       lbls:Label("By dawid#7205 & steppin0nsteppas")
       lbls:Seperator()
-      lbls:Label("Fuck Synapse X lol - Hviqz")
+      lbls:Label("Modified & Fixed")
 
 local king   = win:Server("King", "")
 local assist = king:Channel("Assistment")
-
 
 local rimCFrames = {
     CFrame.new(-51.5, 11, 0),
     CFrame.new(51.5, 11, 0),
 }
 
--- INVISIBILITY DETECTOR
-local exempt = { Hviqz=true, Mesuea=true, True9931=true, MrExors=true, BleechDrink=true }
-local function isCharInvisible(char)
-    for _, p in ipairs(char:GetDescendants()) do
-        if p:IsA("BasePart") and p.Transparency < 1 then
-            return false
-        end
-    end
-    return true
-end
-local function checkInvisibility()
+-- FLING INBOUNDER
+local function doFlingInbounder()
     spawn(function()
-        while getgenv().InvDetect do
-            wait(0.1)
-            local char = player.Character
-            if char and not exempt[player.Name] and isCharInvisible(char) then
-                player:Kick("You just got smoked by q3, nice invisible. :D")
-                return
-            end
-            for _, pl in ipairs(Players:GetPlayers()) do
-                if pl~=player and not exempt[pl.Name]
-                and pl.Character and isCharInvisible(pl.Character) then
-                    wait(10)
-                    if not workspace:FindFirstChild("Basketball") then
-                        player:Kick("Server is broken, some unemployed dude did it.")
-                        return
+        while getgenv().FlingInbounder do
+            task.wait(0.1)
+            pcall(function()
+                local throwIn = workspace:FindFirstChild("ThrowIn")
+                if throwIn then
+                    for _, pl in ipairs(Players:GetPlayers()) do
+                        if pl ~= player and pl.Character and pl.Character:FindFirstChild("HumanoidRootPart") then
+                            local hrp = pl.Character.HumanoidRootPart
+                            if (hrp.Position - throwIn.Position).Magnitude < 6 then
+                                local bav = Instance.new("BodyAngularVelocity")
+                                bav.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+                                bav.AngularVelocity = Vector3.new(0, 99999, 0)
+                                bav.Parent = hrp
+                                task.wait(0.15)
+                                bav:Destroy()
+                                
+                                local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+                                if hum then
+                                    hum:LoadAnimation(stealAnims[1]):Play()
+                                end
+                                
+                                local defenseClient = bc and bc:FindFirstChild("Defense - Client")
+                                if defenseClient then
+                                    for _, child in ipairs(defenseClient:GetChildren()) do
+                                        if child:IsA("RemoteEvent") then
+                                            child:FireServer()
+                                        end
+                                    end
+                                end
+                            end
+                        end
                     end
                 end
-            end
+            end)
         end
     end)
 end
 
-
 function doInfstamina()
     spawn(function()
         while getgenv().Infstamina do
-            wait(0.05)
+            task.wait(0.05)
             pcall(function()
                 player.PlayerScripts.Events.Player.Stamina.Stamina.Value = 9001
             end)
@@ -96,7 +100,7 @@ function doInfstamina()
     end)
 end
 
-local originalArmSizes = {}
+local originalArmData = {}
 local reachConn
 
 local function extendArms()
@@ -108,48 +112,77 @@ local function extendArms()
         "RightHand","LeftHand"
     }) do
         local arm = char:FindFirstChild(partName)
-        if arm and not originalArmSizes[arm] then
-            originalArmSizes[arm] = arm.Size
-            arm.Size = arm.Size * Vector3.new(2.4, 2.4, 2.4)
+        if arm and not originalArmData[arm] then
+            originalArmData[arm] = {
+                Size = arm.Size,
+                Massless = arm.Massless,
+                CanCollide = arm.CanCollide
+            }
+            arm.Size = arm.Size * Vector3.new(2.5, 2.5, 2.5)
+            arm.Massless = true
+            arm.CanCollide = false
             arm.LocalTransparencyModifier = 1
         end
     end
 end
 
 local function resetArms()
-    for arm, size in pairs(originalArmSizes) do
+    for arm, data in pairs(originalArmData) do
         if arm and arm.Parent then
-            arm.Size = size
+            arm.Size = data.Size
+            arm.Massless = data.Massless
+            arm.CanCollide = data.CanCollide
             arm.LocalTransparencyModifier = 0
         end
     end
-    originalArmSizes = {}
+    originalArmData = {}
 end
 
 -- BLOCK SHOTS
 function doBlockShots()
     spawn(function()
         while getgenv().BlockShots do
-            wait(0.1)
-            local char = player.Character
-            local hrp  = char and char:FindFirstChild("HumanoidRootPart")
-            local hum  = char and char:FindFirstChildOfClass("Humanoid")
-            if not (hrp and hum) then continue end
+            task.wait(0.1)
+            pcall(function()
+                local char = player.Character
+                local hrp  = char and char:FindFirstChild("HumanoidRootPart")
+                local hum  = char and char:FindFirstChildOfClass("Humanoid")
+                if not (hrp and hum) then return end
 
-            for _, other in ipairs(Players:GetPlayers()) do
-                if other~=player and other.Team~=player.Team and other.Character then
-                    local oppHRP   = other.Character:FindFirstChild("HumanoidRootPart")
-                    local ballPart = other.Character:FindFirstChild("Ball")
-                                  or other.Character:FindFirstChild("Basketball")
-                    if ballPart and oppHRP then
-                        local dist = (oppHRP.Position - hrp.Position).Magnitude
-                        if dist <= 5 then
-                            hum:LoadAnimation(blockShotAnimObj):Play()
-                            break
+                for _, other in ipairs(Players:GetPlayers()) do
+                    if other ~= player and other.Team ~= player.Team and other.Character then
+                        local oppHRP   = other.Character:FindFirstChild("HumanoidRootPart")
+                        local ballPart = other.Character:FindFirstChild("Ball")
+                                      or other.Character:FindFirstChild("Basketball")
+                                      or other.Character:FindFirstChildOfClass("Tool")
+                        if oppHRP and hrp then
+                            local dist = (oppHRP.Position - hrp.Position).Magnitude
+                            if dist <= 10 then
+                                hum:LoadAnimation(blockShotAnimObj):Play()
+                                
+                                local defenseClient = bc and bc:FindFirstChild("Defense - Client")
+                                if defenseClient then
+                                    for _, child in ipairs(defenseClient:GetChildren()) do
+                                        if child:IsA("RemoteEvent") then
+                                            child:FireServer()
+                                        end
+                                    end
+                                end
+                                
+                                local ballRemote = ReplicatedStorage:FindFirstChild("Ball")
+                                if ballRemote then
+                                    for _, child in ipairs(ballRemote:GetChildren()) do
+                                        if child:IsA("RemoteEvent") then
+                                            child:FireServer()
+                                        end
+                                    end
+                                end
+                                break
+                            end
                         end
                     end
                 end
-            end
+            end)
         end
     end)
 end
@@ -159,7 +192,7 @@ local stored = {}
 function doInbound()
     spawn(function()
         while getgenv().Inbound do
-            wait(0.05)
+            task.wait(0.05)
             local char     = player.Character
             local throwIn  = workspace:FindFirstChild("ThrowIn")
             local restrict = workspace:FindFirstChild("RestrictedCircle")
@@ -171,7 +204,7 @@ function doInbound()
                 throwIn.CanCollide = false
                 local occupied = false
                 for _, pl in ipairs(Players:GetPlayers()) do
-                    if pl~=player and pl.Character and pl.Character:FindFirstChild("HumanoidRootPart") then
+                    if pl ~= player and pl.Character and pl.Character:FindFirstChild("HumanoidRootPart") then
                         if (pl.Character.HumanoidRootPart.Position - throwIn.Position).Magnitude < 0.7 then
                             occupied = true; break
                         end
@@ -202,7 +235,7 @@ function doGoaltend()
 
     spawn(function()
         while getgenv().Goaltend do
-            wait(0.04)
+            task.wait(0.04)
             local char = player.Character
             local ball = workspace:FindFirstChild("Basketball")
             if not (char and ball) then continue end
@@ -223,14 +256,12 @@ function doGoaltend()
     end)
 end
 
-
 local greenShotAnim = Instance.new("Animation")
 greenShotAnim.AnimationId = "rbxassetid://376938580"
 
-
-assist:Toggle("Invisible Detector", false, function(b)
-    getgenv().InvDetect = b
-    if b then checkInvisibility() end
+assist:Toggle("Fling Inbounder", false, function(b)
+    getgenv().FlingInbounder = b
+    if b then doFlingInbounder() end
 end)
 assist:Seperator()
 
@@ -245,12 +276,10 @@ assist:Toggle("Ball Reach", false, function(enabled)
     if enabled then
         extendArms()
 
-        -- Disconnect previous if it exists
         if reachConn then
             reachConn:Disconnect()
         end
 
-        -- Every frame, try to steal if cooldown passed
         reachConn = RunService.RenderStepped:Connect(function()
             local now = os.clock()
             if now - lastSteal < stealCooldown then return end
@@ -269,21 +298,28 @@ assist:Toggle("Ball Reach", false, function(enabled)
                                   or other.Character:FindFirstChild("Basketball")
                     if oppHRP and ballPart then
                         local dist = (oppHRP.Position - hrp.Position).Magnitude
-                        if dist <= 6 then
+                        if dist <= 9 then
                             local dir      = (oppHRP.Position - hrp.Position).Unit
                             local rightDot = hrp.CFrame.RightVector:Dot(dir)
                             local animObj  = (rightDot > 0) and stealAnims[2] or stealAnims[1]
                             hum:LoadAnimation(animObj):Play()
                             lastSteal = now
+
+                            local defenseClient = bc and bc:FindFirstChild("Defense - Client")
+                            if defenseClient then
+                                for _, child in ipairs(defenseClient:GetChildren()) do
+                                    if child:IsA("RemoteEvent") then
+                                        child:FireServer()
+                                    end
+                                end
+                            end
                             break
                         end
                     end
                 end
             end
         end)
-
     else
-        -- clean up
         if reachConn then
             reachConn:Disconnect()
             reachConn = nil
@@ -331,7 +367,7 @@ assist:Button("Green Shot", function()
                 local hum  = char and char:FindFirstChildOfClass("Humanoid")
                 if hum then hum:LoadAnimation(greenShotAnim):Play() end
                 ReplicatedStorage.Ball.StartShooting:FireServer()
-                wait(0.5)
+                task.wait(0.5)
                 ReplicatedStorage.Ball.EndShooting:InvokeServer(true, "Perfect")
             end
         end)
@@ -397,10 +433,9 @@ assist:Button("FPS Boost", function()
     end
 end)
 
-
 local change       = win:Server("Change Animations","")
-local animChannel = change:Channel("Change Animations")
-local animIDInput = ""
+local animChannel  = change:Channel("Change Animations")
+local animIDInput  = ""
 
 animChannel:Textbox(
     "Change Animation",
@@ -409,34 +444,46 @@ animChannel:Textbox(
     function(t) animIDInput = t:match("%S+") or "" end
 )
 
-local animationMap = {
-    sidestep_right       = bc.Shooting.Stepback.sidestep_right,
-    sidestep_left        = bc.Shooting.Stepback.sidestep_left,
-    UnderhandLayup_Right = bc.Shooting.Animations.UnderhandLayup["Right Arm"],
-    UnderhandLayup_Left  = bc.Shooting.Animations.UnderhandLayup["Left Arm"],
-    Layup_Right          = bc.Shooting.Animations.Layup["Right Arm"],
-    Layup_Left           = bc.Shooting.Animations.Layup["Left Arm"],
-    JumpShot_Left        = bc.Shooting.Animations.JumpShot["Left Arm"],
-    JumpShot_Right       = bc.Shooting.Animations.JumpShot["Right Arm"],
-    Dunk_Right           = bc.Shooting.Animations.Dunk["Right Arm"],
-    Dunk_Left            = bc.Shooting.Animations.Dunk["Left Arm"],
-    Overhead_Right       = bc["Passing - Client"].Overhead.Right,
-    Overhead_Left        = bc["Passing - Client"].Overhead.Left,
-    Chest_Right          = bc["Passing - Client"].Chest.Right,
-    Chest_Left           = bc["Passing - Client"].Chest.Left,
-    Dribble_Steal        = bc["Dribble - Client"].Right.Steal,
-    TripleThreat_Right   = bc["Dribble - Client"].Right.TripleThreat,
-    SwapHands_Right      = bc["Dribble - Client"].Right.SwapHands,
-    Dribble_Right        = bc["Dribble - Client"].Right.Dribble,
-    BTB_Right            = bc["Dribble - Client"].Right.BTB,
-    TripleThreat_Left    = bc["Dribble - Client"].Left.TripleThreat,
-    SwapHands_Left       = bc["Dribble - Client"].Left.SwapHands,
-    Dribble_Left         = bc["Dribble - Client"].Left.Dribble,
-    BTB_Left             = bc["Dribble - Client"].Left.BTB,
-    DefenseBlock         = bc["Defense - Client"].Block,
-    Steal_Right          = bc["Defense - Client"].Steal.Right,
-    Steal_Left           = bc["Defense - Client"].Steal.Left,
-}
+local function getAnimationObj(opt)
+    local currentBC = player.Character and player.Character:FindFirstChild("BallControl")
+    if not currentBC then return nil end
+    
+    local map = {
+        sidestep_right       = function() return currentBC.Shooting.Stepback.sidestep_right end,
+        sidestep_left        = function() return currentBC.Shooting.Stepback.sidestep_left end,
+        UnderhandLayup_Right = function() return currentBC.Shooting.Animations.UnderhandLayup["Right Arm"] end,
+        UnderhandLayup_Left  = function() return currentBC.Shooting.Animations.UnderhandLayup["Left Arm"] end,
+        Layup_Right          = function() return currentBC.Shooting.Animations.Layup["Right Arm"] end,
+        Layup_Left           = function() return currentBC.Shooting.Animations.Layup["Left Arm"] end,
+        JumpShot_Left        = function() return currentBC.Shooting.Animations.JumpShot["Left Arm"] end,
+        JumpShot_Right       = function() return currentBC.Shooting.Animations.JumpShot["Right Arm"] end,
+        Dunk_Right           = function() return currentBC.Shooting.Animations.Dunk["Right Arm"] end,
+        Dunk_Left            = function() return currentBC.Shooting.Animations.Dunk["Left Arm"] end,
+        Overhead_Right       = function() return currentBC["Passing - Client"].Overhead.Right end,
+        Overhead_Left        = function() return currentBC["Passing - Client"].Overhead.Left end,
+        Chest_Right          = function() return currentBC["Passing - Client"].Chest.Right end,
+        Chest_Left           = function() return currentBC["Passing - Client"].Chest.Left end,
+        Dribble_Steal        = function() return currentBC["Dribble - Client"].Right.Steal end,
+        TripleThreat_Right   = function() return currentBC["Dribble - Client"].Right.TripleThreat end,
+        SwapHands_Right      = function() return currentBC["Dribble - Client"].Right.SwapHands end,
+        Dribble_Right        = function() return currentBC["Dribble - Client"].Dribble end,
+        BTB_Right            = function() return currentBC["Dribble - Client"].Right.BTB end,
+        TripleThreat_Left    = function() return currentBC["Dribble - Client"].Left.TripleThreat end,
+        SwapHands_Left       = function() return currentBC["Dribble - Client"].Left.SwapHands end,
+        Dribble_Left         = function() return currentBC["Dribble - Client"].Left.Dribble end,
+        BTB_Left             = function() return currentBC["Dribble - Client"].Left.BTB end,
+        DefenseBlock         = function() return currentBC["Defense - Client"].Block end,
+        Steal_Right          = function() return currentBC["Defense - Client"].Steal.Right end,
+        Steal_Left           = function() return currentBC["Defense - Client"].Steal.Left end,
+    }
+    
+    local getter = map[opt]
+    if getter then
+        local success, result = pcall(getter)
+        if success then return result end
+    end
+    return nil
+end
 
 animChannel:Dropdown(
     "Choose Which Animation You Want To Switch.",
@@ -449,14 +496,19 @@ animChannel:Dropdown(
       "DefenseBlock","Steal_Right","Steal_Left"
     },
     function(opt)
-        local animObj = animationMap[opt]
-        if not animObj then return end
+        local animObj = getAnimationObj(opt)
+        if not animObj then
+            warn("Animation object not found!")
+            return
+        end
         if animIDInput == "" then
-            warn("No ID typed!") return
+            warn("No ID typed!") 
+            return
         end
         local num = animIDInput:match("(%d+)")
         if not num then
-            warn("Invalid ID format") return
+            warn("Invalid ID format") 
+            return
         end
         animObj.AnimationId = "rbxassetid://" .. num
         StarterGui:SetCore("SendNotification", {
