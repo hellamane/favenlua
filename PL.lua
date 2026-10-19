@@ -1,6 +1,6 @@
--- Prison Life Luau Code
+-- Prison Life
 -- Made by hellamane 3/16/26 7:52 PM
--- This script should not be skidded.
+-- Fixed and Organized
 
 local DiscordLib = loadstring(game:HttpGet"https://raw.githubusercontent.com/dawid-scripts/UI-Libs/main/discord%20lib.txt")()
 
@@ -14,6 +14,26 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local StarterGui = game:GetService("StarterGui")
+local MarketplaceService = game:GetService("MarketplaceService")
+
+-- Get Game Name safely for badge notifications
+local gameName = "Prison Life"
+pcall(function()
+    local info = MarketplaceService:GetProductInfo(game.GameId)
+    if info and info.Name then
+        gameName = info.Name
+    end
+end)
+
+local function showBadgeNotification(text, duration)
+    pcall(function()
+        StarterGui:SetCore("SendNotification", {
+            Title = "faven.lua",
+            Text = "You're playing " .. gameName,
+            Duration = duration or 3,
+        })
+    end)
+end
 
 local HitboxEnabled = false
 local Connections = {}
@@ -97,8 +117,10 @@ tools:Toggle("Hitbox Extender", false, function(state)
     HitboxEnabled = state
     if state then
         enableHitbox()
+        showBadgeNotification("Hitbox Extender Enabled", 2)
     else
         disableHitbox()
+        showBadgeNotification("Hitbox Extender Disabled", 2)
     end
 end)
 
@@ -114,13 +136,7 @@ toggleSound.Volume = 1
 toggleSound.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
 local function Notify(text)
-    pcall(function()
-        StarterGui:SetCore("SendNotification", {
-            Title = "faven.lua",
-            Text = text,
-            Duration = 2
-        })
-    end)
+    showBadgeNotification(text, 2)
 end
 
 local function IsValidTarget(plr)
@@ -185,13 +201,13 @@ tools:Bind(
     end
 )
 
+tools:Seperator()
+
 RunService.RenderStepped:Connect(function()
     if Aiming and AimlockEnabled then
         AimLock()
     end
 end)
-
-tools:Seperator()
 
 local ESPEnabled = false
 local espData = {}
@@ -361,7 +377,13 @@ local function disableESP()
 end
 
 tools:Toggle("ESP", false, function(state)
-    if state then enableESP() else disableESP() end
+    if state then 
+        enableESP() 
+        showBadgeNotification("ESP Enabled", 2)
+    else 
+        disableESP() 
+        showBadgeNotification("ESP Disabled", 2)
+    end
 end)
 
 tools:Seperator()
@@ -370,6 +392,11 @@ local InfJumpEnabled = false
 
 tools:Toggle("Infinite Jump", false, function(state)
     InfJumpEnabled = state
+    if state then
+        showBadgeNotification("Infinite Jump Enabled", 2)
+    else
+        showBadgeNotification("Infinite Jump Disabled", 2)
+    end
 end)
 
 UserInputService.JumpRequest:Connect(function()
@@ -390,6 +417,11 @@ local NoCollideTools = false
 
 tools:Toggle("NoCollide Tools", false, function(state)
     NoCollideTools = state
+    if state then
+        showBadgeNotification("NoCollide Tools Enabled", 2)
+    else
+        showBadgeNotification("NoCollide Tools Disabled", 2)
+    end
 end)
 
 local function makeToolNonCollide(tool)
@@ -430,10 +462,11 @@ local jpMin, jpMax = 24, 110
 tools:Textbox("Walk Speed", "Enter a value between 16 and 33", true, function(text)
     local num = tonumber(text)
     if not num or num < wsMin or num > wsMax then
-        DiscordLib:Notification("faven.lua", "Your Walk Speed should be between 16 and 33.", "Okay!")
+        showBadgeNotification("Your Walk Speed should be between 16 and 33.", 2)
         return
     end
     currentWS = num
+    showBadgeNotification("Walk Speed set to " .. tostring(num), 2)
 end)
 
 tools:Seperator()
@@ -441,11 +474,14 @@ tools:Seperator()
 tools:Textbox("Jump Power", "Enter a value between 24 and 110", true, function(text)
     local num = tonumber(text)
     if not num or num < jpMin or num > jpMax then
-        DiscordLib:Notification("faven.lua", "Your Jump Power should be between 24 and 110.", "Okay!")
+        showBadgeNotification("Your Jump Power should be between 24 and 110.", 2)
         return
     end
     currentJP = num
+    showBadgeNotification("Jump Power set to " .. tostring(num), 2)
 end)
+
+tools:Seperator()
 
 RunService.Heartbeat:Connect(function()
     local char = LocalPlayer.Character
@@ -458,10 +494,7 @@ RunService.Heartbeat:Connect(function()
     hum.JumpPower = currentJP
 end)
 
---// SHARED TELEPORT METHOD (Global Control for Both Teleport Dropdowns)
-local globalTeleportMethod = "CFrame"
-
---// VEHICLE SERVER (Placed right under the first server)
+--// VEHICLE SERVER
 local vehicleServer = win:Server("Vehicle", "")
 local vehicleChannel = vehicleServer:Channel("Vehicle Controls")
 
@@ -584,15 +617,18 @@ vehicleChannel:Toggle("Vehicle Fly", false, function(bool)
         NOFLY()
         task.wait()
         sFLY(true)
+        showBadgeNotification("Vehicle Fly Enabled", 2)
     else
         NOFLY()
+        showBadgeNotification("Vehicle Fly Disabled", 2)
     end
 end)
+
+vehicleChannel:Seperator()
 
 vehicleChannel:Slider("Vehicle Speed", 1, 18, 1, function(value)
     vehicleflyspeed = value
 end)
-
 
 --// TELEPORTS SERVER & CHANNEL
 local Teleports = win:Server("Teleports", "")
@@ -620,16 +656,7 @@ local teleportList = {
 
 local isCoolingDown = false
 local coolDownTimer = 0
-
-local function showBadgeNotification(text, duration)
-    pcall(function()
-        StarterGui:SetCore("SendNotification", {
-            Title = "faven.lua",
-            Text = text,
-            Duration = duration or 3,
-        })
-    end)
-end
+local globalTeleportMethod = "CFrame"
 
 tpChannel:Dropdown("Teleport Method", {"CFrame", "Tween"}, function(selected)
     globalTeleportMethod = selected
@@ -723,6 +750,7 @@ tpChannel:Seperator()
 tpChannel:Button("Clear Teleports", function()
     teleportList = {}
     dropdown:Clear()
+    showBadgeNotification("Cleared Custom Teleports", 2)
 end)
 
 tpChannel:Seperator()
@@ -737,8 +765,8 @@ tpChannel:Button("Add Custom CFrame", function()
     local name = "Custom_" .. tostring(math.random(1000, 9999))
     teleportList[name] = hrp.CFrame
     dropdown:Add(name)
+    showBadgeNotification("Added Custom Location", 2)
 end)
-
 
 --// WEAPONS SERVER & CHANNELS
 local weaponsServer = win:Server("Weapons", "")
@@ -781,6 +809,8 @@ weaponTeleportsChan:Dropdown(
     end
 )
 
+weaponTeleportsChan:Seperator()
+
 weaponTeleportsChan:Button("Grab Guns", function()
     if not selectedWeapon then return end
     if weaponCoolingDown then
@@ -812,7 +842,6 @@ weaponTeleportsChan:Button("Grab Guns", function()
     if weaponSpecificTeleportMethod == "CFrame" then
         hrp.CFrame = targetCF + Vector3.new(0, 3, 0)
     elseif weaponSpecificTeleportMethod == "Tween" then
-        local originalCFrame = hrp.CFrame
         local downTween = TweenService:Create(
             hrp,
             TweenInfo.new(0.35, Enum.EasingStyle.Linear),
@@ -861,7 +890,6 @@ weaponTeleportsChan:Button("Grab Guns", function()
     end)
 end)
 
--- Enhanced Weapon Skins & Mods Additions
 weaponSkinsChan:Button("Apply Gold Skin to All", function()
     local char = LocalPlayer.Character
     if not char then return end
@@ -885,19 +913,16 @@ weaponModsChan:Button("Instant Reload Mod", function()
             local handle = tool:FindFirstChild("Handle")
             if handle then
                 local fireEvent = handle:FindFirstChild("FireEvent") or tool:FindFirstChild("FireEvent")
-                -- Hook into remote events if present for instant reload / rapid fire enhancements
             end
         end
     end
     showBadgeNotification("Weapon Mod Enabled!", 2)
 end)
 
-
---// SETTINGS SERVER (Placed as the LAST server, containing all misc stuff & Inf Yield style Anti-Lag / Day Loop)
+--// SETTINGS SERVER
 local settingsServer = win:Server("Settings", "")
 local settingsChannel = settingsServer:Channel("Settings & Misc")
 
--- Guard/Crim Aimlock Toggle
 local AimlockEnabledMisc = true
 local AimingMisc = false
 local currentTargetMisc = nil
@@ -909,13 +934,7 @@ toggleSoundMisc.Volume = 1
 toggleSoundMisc.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
 local function NotifyMisc(text)
-    pcall(function()
-        game:GetService("StarterGui"):SetCore("SendNotification", {
-            Title = "faven.lua",
-            Text = text,
-            Duration = 2
-        })
-    end)
+    showBadgeNotification(text, 2)
 end
 
 local function IsValidTargetMisc(plr)
@@ -1002,13 +1021,13 @@ settingsChannel:Bind(
     end
 )
 
+settingsChannel:Seperator()
+
 RunService.RenderStepped:Connect(function()
     if AimingMisc and AimlockEnabledMisc then
         AimLockMisc()
     end
 end)
-
-settingsChannel:Seperator()
 
 settingsChannel:Toggle(
     "Anti AFK",
@@ -1024,18 +1043,19 @@ settingsChannel:Toggle(
                 task.wait(1)
                 game:GetService("VirtualUser"):Button2Up(Vector2.new(), workspace.CurrentCamera.CFrame)
             end)
+
         else
             if _G.AntiAFKConnection then
                 _G.AntiAFKConnection:Disconnect()
                 _G.AntiAFKConnection = nil
             end
+
         end
     end
 )
 
 settingsChannel:Seperator()
 
--- Infinite Yield Loop Daytime (loopfb equivalent)
 settingsChannel:Toggle(
     "Loop DayTime (loopfb)",
     false,
@@ -1054,17 +1074,18 @@ settingsChannel:Toggle(
                     task.wait(1)
                 end
             end)
+
         else
             _G.DayLoop = false
+
         end
     end
 )
 
 settingsChannel:Seperator()
 
--- Infinite Yield Anti-Lag / Boost FPS (Full optimization script)
 settingsChannel:Button(
-    "Boost FPS (Infinite Yield Antilag)",
+    "Boost FPS (Antilag)",
     function()
         pcall(function()
             local Lighting = game:GetService("Lighting")
@@ -1108,6 +1129,5 @@ settingsChannel:Button(
                 end
             end
         end)
-        showBadgeNotification("Infinite Yield Antilag Applied!", 2)
     end
 )
