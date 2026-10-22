@@ -1,6 +1,5 @@
 -- Prison Life
 -- Made by hellamane 3/16/26 7:52 PM
--- Fully Restored & Fixed Version (Cleaned notifications, added Forcefield Check toggle)
 
 local DiscordLib = loadstring(game:HttpGet"https://raw.githubusercontent.com/dawid-scripts/UI-Libs/main/discord%20lib.txt")()
 
@@ -94,7 +93,6 @@ local function disableHitbox()
     Connections = {}
 end
 
---// PLAYER CONFIGURATIONS CHANNEL
 playerConfigChan:Toggle("Hitbox Extender", false, function(state)
     HitboxEnabled = state
     if state then
@@ -106,7 +104,6 @@ end)
 
 playerConfigChan:Seperator()
 
---// SHARED AIMLOCK & TARGET UTILS
 local aimlockMode = "None"
 local Aiming = false
 local currentTarget = nil
@@ -433,14 +430,6 @@ end)
 
 playerConfigChan:Seperator()
 
--- Forcefield Check toggle placed under the last toggle in player configs
-local forcefieldCheckEnabled = true
-playerConfigChan:Toggle("Forcefield Check", true, function(state)
-    forcefieldCheckEnabled = state
-end)
-
-playerConfigChan:Seperator()
-
 local currentWS = 19
 local currentJP = 35
 
@@ -478,13 +467,12 @@ RunService.Heartbeat:Connect(function()
     hum.JumpPower = currentJP
 end)
 
-
---// TOOLS CHANNEL (New Player Target Features & Controls)
 local selectedTargetPlayer = nil
 local playerConfigEnabled = false
 local autoFistEnabled = false
 local autoKillEnabled = false
 local autoResetEnabled = false
+local forcefieldCheckEnabled = true
 local originalPositionBeforeTarget = nil
 local isExecutingTargetAction = false
 
@@ -497,6 +485,12 @@ end
 
 local playerDropdown = toolsChan:Dropdown("Select Target Player", playerNames, function(choice)
     selectedTargetPlayer = Players:FindFirstChild(choice)
+end)
+
+toolsChan:Seperator()
+
+toolsChan:Toggle("Forcefield Check", true, function(state)
+    forcefieldCheckEnabled = state
 end)
 
 toolsChan:Seperator()
@@ -615,7 +609,6 @@ RunService.Heartbeat:Connect(function()
         return 
     end
 
-    -- Forcefield check active only if the toggle is enabled
     if forcefieldCheckEnabled and targetChar:FindFirstChildOfClass("ForceField") then
         if isExecutingTargetAction and originalPositionBeforeTarget then
             local char = LocalPlayer.Character
@@ -689,8 +682,6 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
-
---// VEHICLE SERVER
 local vehicleServer = win:Server("Vehicle", "")
 local vehicleChannel = vehicleServer:Channel("Vehicle Controls")
 
@@ -847,8 +838,6 @@ vehicleChannel:Slider("Vehicle Speed", 1, 18, 1, function(value)
     vehicleflyspeed = value
 end)
 
-
---// TELEPORTS SERVER & CHANNEL
 local Teleports = win:Server("Teleports", "")
 local tpChannel = Teleports:Channel("Locations")
 
@@ -1005,8 +994,6 @@ tpChannel:Button("Add Custom CFrame", function()
     dropdown:Add(name)
 end)
 
-
---// WEAPONS SERVER & CHANNELS
 local weaponsServer = win:Server("Weapons", "")
 local weaponTeleportsChan = weaponsServer:Channel("Weapons")
 local weaponSkinsChan = weaponsServer:Channel("Weapon Skins")
@@ -1122,8 +1109,6 @@ weaponModsChan:Button("Instant Reload Mod", function()
     end
 end)
 
-
---// SETTINGS SERVER & CHANNELS
 local settingsServer = win:Server("Settings", "")
 local aimSettingsChannel = settingsServer:Channel("Aim Settings")
 local settingsChannel = settingsServer:Channel("Settings & Misc")
