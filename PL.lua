@@ -1,5 +1,5 @@
 -- Prison Life
--- Made by hellamane 3/16/26 7:52 PM
+-- Made by hellamane 3/16/26 7:52 PM (Optimized & Fixed)
 
 local DiscordLib = loadstring(game:HttpGet"https://raw.githubusercontent.com/dawid-scripts/UI-Libs/main/discord%20lib.txt")()
 
@@ -530,6 +530,17 @@ toolsChan:Toggle("Auto Reset", false, function(state)
     autoResetEnabled = state
 end)
 
+-- Optimized TouchGiver finder using fast spatial query
+local function getTouchGiverFast(targetPos)
+    local parts = workspace:GetPartBoundsInBox(CFrame.new(targetPos), Vector3.new(20, 20, 20))
+    for _, part in ipairs(parts) do
+        if part.Name == "TouchGiver" and part:IsA("BasePart") then
+            return part
+        end
+    end
+    return nil
+end
+
 local function hasGunInBackpackOrChar()
     local char = LocalPlayer.Character
     local backpack = LocalPlayer:FindFirstChild("Backpack")
@@ -567,15 +578,7 @@ local function getClosestGunAndGrab(gunType)
         targetPos = Vector3.new(-931, 91, 2039)
     end
 
-    local targetObj = nil
-    for _, obj in ipairs(workspace:GetDescendants()) do
-        if obj.Name == "TouchGiver" and obj:IsA("BasePart") then
-            if (obj.Position - targetPos).Magnitude < 25 then
-                targetObj = obj
-                break
-            end
-        end
-    end
+    local targetObj = getTouchGiverFast(targetPos)
 
     if targetObj and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
         local hrp = LocalPlayer.Character.HumanoidRootPart
@@ -584,10 +587,10 @@ local function getClosestGunAndGrab(gunType)
         pcall(function()
             targetObj.Anchored = true
             targetObj.CFrame = hrp.CFrame * CFrame.new(0, 0, -2)
-            task.wait(0.2)
+            task.wait(0.05)
             firetouchinterest(hrp, targetObj, 0)
             firetouchinterest(hrp, targetObj, 1)
-            task.wait(0.2)
+            task.wait(0.05)
             targetObj.CFrame = originalCF
             targetObj.Anchored = originalAnchored
         end)
@@ -643,7 +646,7 @@ RunService.Heartbeat:Connect(function()
         if not hasGunInBackpackOrChar() then
             getClosestGunAndGrab("Shotgun")
             getClosestGunAndGrab("AK-47")
-            task.wait(0.2)
+            task.wait(0.1)
         end
 
         local backpack = LocalPlayer:FindFirstChild("Backpack")
@@ -918,16 +921,17 @@ tpChannel:Button("Teleport Now", function()
     if globalTeleportMethod == "CFrame" then
         hrp.CFrame = cf + Vector3.new(0, 3, 0)
     elseif globalTeleportMethod == "Tween" then
+        -- Fast, snappy tween speeds optimized
         local downTween = TweenService:Create(
             hrp,
-            TweenInfo.new(0.35, Enum.EasingStyle.Linear),
-            {CFrame = hrp.CFrame * CFrame.new(0, -10, 0)}
+            TweenInfo.new(0.15, Enum.EasingStyle.Linear),
+            {CFrame = hrp.CFrame * CFrame.new(0, -5, 0)}
         )
         downTween:Play()
         downTween.Completed:Wait()
 
-        local undergroundTarget = CFrame.new(cf.X, cf.Y - 10, cf.Z)
-        local travelTime = math.clamp(distance / 45, 1, 10)
+        local undergroundTarget = CFrame.new(cf.X, cf.Y - 5, cf.Z)
+        local travelTime = math.clamp(distance / 250, 0.2, 1.2)
 
         local tpTween = TweenService:Create(
             hrp,
@@ -939,12 +943,12 @@ tpChannel:Button("Teleport Now", function()
 
         TweenService:Create(
             hrp,
-            TweenInfo.new(0.9, Enum.EasingStyle.Linear),
+            TweenInfo.new(0.2, Enum.EasingStyle.Linear),
             {CFrame = cf + Vector3.new(0, 3, 0)}
         ):Play()
     end
 
-    task.delay(0.6, function()
+    task.delay(0.4, function()
         for _, part in ipairs(char:GetDescendants()) do
             if part:IsA("BasePart") then
                 part.CanCollide = true
@@ -953,7 +957,7 @@ tpChannel:Button("Teleport Now", function()
     end)
 
     isCoolingDown = true
-    coolDownTimer = 6
+    coolDownTimer = 3
 
     task.spawn(function()
         while coolDownTimer > 0 do
@@ -1041,16 +1045,7 @@ weaponTeleportsChan:Button("Grab Guns", function()
     if not hrp then return end
 
     local targetPos = weaponLocations[selectedWeapon]
-    local targetObj = nil
-
-    for _, obj in ipairs(workspace:GetDescendants()) do
-        if obj.Name == "TouchGiver" and obj:IsA("BasePart") then
-            if (obj.Position - targetPos).Magnitude < 15 then
-                targetObj = obj
-                break
-            end
-        end
-    end
+    local targetObj = getTouchGiverFast(targetPos)
 
     if not targetObj then return end
 
@@ -1060,18 +1055,18 @@ weaponTeleportsChan:Button("Grab Guns", function()
     pcall(function()
         targetObj.Anchored = true
         targetObj.CFrame = hrp.CFrame * CFrame.new(0, 0, -2)
-        task.wait(0.2)
+        task.wait(0.05)
 
         firetouchinterest(hrp, targetObj, 0)
         firetouchinterest(hrp, targetObj, 1)
-        task.wait(0.2)
+        task.wait(0.05)
 
         targetObj.CFrame = originalCF
         targetObj.Anchored = originalAnchored
     end)
 
     weaponCoolingDown = true
-    weaponCoolDownTimer = 6
+    weaponCoolDownTimer = 3
 
     task.spawn(function()
         while weaponCoolDownTimer > 0 do
@@ -1101,9 +1096,13 @@ weaponModsChan:Button("Instant Reload Mod", function()
     if not char then return end
     for _, tool in ipairs(char:GetChildren()) do
         if tool:IsA("Tool") then
-            local handle = tool:FindFirstChild("Handle")
-            if handle then
-                local fireEvent = handle:FindFirstChild("FireEvent") or tool:FindFirstChild("FireEvent")
+            for _, v in ipairs(tool:GetDescendants()) do
+                if v:IsA("NumberValue") or v:IsA("IntValue") then
+                    local vName = v.Name:lower()
+                    if vName:find("reload") or vName:find("cooldown") then
+                        v.Value = 0
+                    end
+                end
             end
         end
     end
