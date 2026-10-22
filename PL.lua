@@ -587,15 +587,19 @@ local function getClosestGunAndGrab(gunType)
         local hrp = LocalPlayer.Character.HumanoidRootPart
         local originalCF = targetObj.CFrame
         local originalAnchored = targetObj.Anchored
+        local originalCanCollide = targetObj.CanCollide
+
         pcall(function()
             targetObj.Anchored = true
-            targetObj.CFrame = hrp.CFrame * CFrame.new(0, 0, -2)
+            targetObj.CanCollide = false
+            targetObj.CFrame = hrp.CFrame
             task.wait(0.05)
             firetouchinterest(hrp, targetObj, 0)
             firetouchinterest(hrp, targetObj, 1)
             task.wait(0.05)
             targetObj.CFrame = originalCF
             targetObj.Anchored = originalAnchored
+            targetObj.CanCollide = originalCanCollide
         end)
     end
 end
@@ -873,12 +877,13 @@ local selectedDest = nil
 local globalTeleportMethod = "CFrame"
 local isCoolingDown = false
 local coolDownTimer = 0
-local customSpawnCF = CFrame.new(868, 40, 2342)
+local customSpawnCF = nil
 
 LocalPlayer.CharacterAdded:Connect(function(char)
+    if not customSpawnCF then return end
     task.wait(0.5)
     local hrp = char:WaitForChild("HumanoidRootPart", 5)
-    if hrp and customSpawnCF then
+    if hrp then
         hrp.CFrame = customSpawnCF + Vector3.new(0, 3, 0)
     end
 end)
@@ -1055,10 +1060,12 @@ weaponTeleportsChan:Button("Grab Guns", function()
 
     local originalCF = targetObj.CFrame
     local originalAnchored = targetObj.Anchored
+    local originalCanCollide = targetObj.CanCollide
 
     pcall(function()
         targetObj.Anchored = true
-        targetObj.CFrame = hrp.CFrame * CFrame.new(0, 0, -2)
+        targetObj.CanCollide = false
+        targetObj.CFrame = hrp.CFrame
         task.wait(0.05)
 
         firetouchinterest(hrp, targetObj, 0)
@@ -1067,6 +1074,7 @@ weaponTeleportsChan:Button("Grab Guns", function()
 
         targetObj.CFrame = originalCF
         targetObj.Anchored = originalAnchored
+        targetObj.CanCollide = originalCanCollide
     end)
 
     weaponCoolingDown = true
