@@ -13,7 +13,11 @@ local LocalPlayer = Players.LocalPlayer
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
-local VirtualInputService = game:GetService("VirtualInputService")
+
+local VirtualInputService = nil
+pcall(function()
+    VirtualInputService = game:GetService("VirtualInputService")
+end)
 
 local HitboxEnabled = false
 local Connections = {}
@@ -530,7 +534,6 @@ toolsChan:Toggle("Auto Reset", false, function(state)
     autoResetEnabled = state
 end)
 
--- Optimized TouchGiver finder using fast spatial query
 local function getTouchGiverFast(targetPos)
     local parts = workspace:GetPartBoundsInBox(CFrame.new(targetPos), Vector3.new(20, 20, 20))
     for _, part in ipairs(parts) do
@@ -638,9 +641,11 @@ RunService.Heartbeat:Connect(function()
 
     if autoFistEnabled then
         pcall(function()
-            VirtualInputService:SendKeyEvent(true, Enum.KeyCode.F, false, game)
-            task.wait(0.05)
-            VirtualInputService:SendKeyEvent(false, Enum.KeyCode.F, false, game)
+            if VirtualInputService then
+                VirtualInputService:SendKeyEvent(true, Enum.KeyCode.F, false, game)
+                task.wait(0.05)
+                VirtualInputService:SendKeyEvent(false, Enum.KeyCode.F, false, game)
+            end
         end)
     elseif autoKillEnabled then
         if not hasGunInBackpackOrChar() then
@@ -921,7 +926,6 @@ tpChannel:Button("Teleport Now", function()
     if globalTeleportMethod == "CFrame" then
         hrp.CFrame = cf + Vector3.new(0, 3, 0)
     elseif globalTeleportMethod == "Tween" then
-        -- Fast, snappy tween speeds optimized
         local downTween = TweenService:Create(
             hrp,
             TweenInfo.new(0.15, Enum.EasingStyle.Linear),
