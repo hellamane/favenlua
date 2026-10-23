@@ -1,5 +1,5 @@
 -- Prison Life
--- Made by hellamane 3/16/26 7:52 PM (Optimized & Fixed)
+-- Made by hellamane 3/16/26 7:52 PM
 
 local DiscordLib = loadstring(game:HttpGet"https://raw.githubusercontent.com/dawid-scripts/UI-Libs/main/discord%20lib.txt")()
 
@@ -520,7 +520,6 @@ local selectedTargetPlayer = nil
 local playerConfigEnabled = false
 local autoFistEnabled = false
 local autoKillEnabled = false
-local autoArrestEnabled = false
 local autoResetEnabled = false
 local originalPositionBeforeTarget = nil
 local isExecutingTargetAction = false
@@ -581,14 +580,74 @@ end)
 
 targetPlayerChan:Seperator()
 
-targetPlayerChan:Toggle("Auto Arrest", false, function(state)
-    autoArrestEnabled = state
+targetPlayerChan:Toggle("Auto Reset", false, function(state)
+    autoResetEnabled = state
 end)
 
 targetPlayerChan:Seperator()
 
-targetPlayerChan:Toggle("Auto Reset", false, function(state)
-    autoResetEnabled = state
+targetPlayerChan:Button("Arrest Player", function()
+    if not selectedTargetPlayer or not selectedTargetPlayer.Character then
+        sendBadgeNotification("faven.lua", "Error: No valid target player selected!")
+        return
+    end
+
+    task.spawn(function()
+        local targetPlr = selectedTargetPlayer
+        sendBadgeNotification("faven.lua", "Waiting for " .. targetPlr.Name .. " to change team to Inmate...")
+
+        local currentTeam = targetPlr.Team and targetPlr.Team.Name
+        while targetPlr and targetPlr.Parent and targetPlr.Team and targetPlr.Team.Name == currentTeam do
+            task.wait(0.5)
+        end
+
+        if not targetPlr or not targetPlr.Team or targetPlr.Team.Name ~= "Inmates" then
+            sendBadgeNotification("faven.lua", "Error: Player did not switch to Inmate team!")
+            return
+        end
+
+        sendBadgeNotification("faven.lua", targetPlr.Name + " is now an Inmate. Attempting arrest...")
+
+        local char = LocalPlayer.Character
+        if not char then return end
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end
+
+        local backpack = LocalPlayer:FindFirstChild("Backpack")
+        if backpack then
+            for _, item in ipairs(backpack:GetChildren()) do
+                if item:IsA("Tool") and (item.Name:lower():find("arrest") or item.Name:lower():find("handcuff")) then
+                    item.Parent = char
+                end
+            end
+        end
+
+        local targetChar = targetPlr.Character
+        local targetTorso = targetChar and (targetChar:FindFirstChild("Torso") or targetChar:FindFirstChild("UpperTorso") or targetChar:FindFirstChild("HumanoidRootPart"))
+        
+        if not targetTorso then
+            sendBadgeNotification("faven.lua", "Error: Target torso not found for arrest!")
+            return
+        end
+
+        local success = false
+        pcall(function()
+            for _, tool in ipairs(char:GetChildren()) do
+                if tool:IsA("Tool") and (tool.Name:lower():find("arrest") or tool.Name:lower():find("handcuff")) then
+                    local handle = tool:FindFirstChild("Handle")
+                    if handle and firetouchinterest then
+                        firetouchinterest(handle, targetTorso, 0)
+                        firetouchinterest(handle, targetTorso, 1)
+                        success = true
+                    end
+                end
+            end
+        end)
+
+        if not success then
+            sendBadgeNotification("faven.lua", "Error: Failed to execute arrest on target player!")
+        end
+    end)
 end)
 
 local function getTouchGiverFast(targetPos)
@@ -809,7 +868,7 @@ RunService.Heartbeat:Connect(function()
     if not isExecutingTargetAction then
         originalPositionBeforeTarget = hrp.CFrame
         isExecutingTargetAction = true
-        sendBadgeNotification("faven.lua", "Targeting player: " .. selectedTargetPlayer.Name)
+        sendBadgeNotification("faven.lua", "Targeting player: " + selectedTargetPlayer.Name)
     end
 
     hum.PlatformStand = true
@@ -819,10 +878,10 @@ RunService.Heartbeat:Connect(function()
         end
     end
 
-    hrp.CFrame = targetHrp.CFrame * CFrame.new(0, -3, 0)
-
     if autoFistEnabled then
+        hrp.CFrame = targetHrp.CFrame * CFrame.new(0, -4, 0)
         pcall(function()
+            hrp.CFrame = CFrame.new(hrp.Position, hrp.Position + Vector3.new(0, 50, 0))
             if VirtualInputService then
                 VirtualInputService:SendKeyEvent(true, Enum.KeyCode.F, false, game)
                 task.wait(0.02)
@@ -830,6 +889,8 @@ RunService.Heartbeat:Connect(function()
             end
         end)
     elseif autoKillEnabled then
+        hrp.CFrame = targetHrp.CFrame * CFrame.new(0, 0, 3)
+
         if not hasGunInBackpackOrChar() then
             getBestWeapon()
             task.wait(0.1)
@@ -871,32 +932,6 @@ RunService.Heartbeat:Connect(function()
             mouse1press()
             task.wait(0.05)
             mouse1release()
-        end)
-    elseif autoArrestEnabled then
-        local backpack = LocalPlayer:FindFirstChild("Backpack")
-        if backpack then
-            for _, item in ipairs(backpack:GetChildren()) do
-                if item:IsA("Tool") then
-                    local name = item.Name:lower()
-                    if name:find("arrest") or name:find("handcuff") then
-                        item.Parent = char
-                    end
-                end
-            end
-        end
-        pcall(function()
-            for _, tool in ipairs(char:GetChildren()) do
-                if tool:IsA("Tool") then
-                    local name = tool.Name:lower()
-                    if name:find("arrest") or name:find("handcuff") then
-                        local handle = tool:FindFirstChild("Handle")
-                        if handle and firetouchinterest then
-                            firetouchinterest(handle, targetTorso, 0)
-                            firetouchinterest(handle, targetTorso, 1)
-                        end
-                    end
-                end
-            end
         end)
     end
 
@@ -1238,6 +1273,7 @@ end
 local selectedWeapon = nil
 local weaponCoolingDown = false
 local weaponCoolDownTimer = 0
+local autoGrabWeaponsEnabled = false
 
 weaponTeleportsChan:Dropdown(
     "Pick A Weapon",
@@ -1246,6 +1282,12 @@ weaponTeleportsChan:Dropdown(
         selectedWeapon = choice
     end
 )
+
+weaponTeleportsChan:Seperator()
+
+weaponTeleportsChan:Toggle("Auto Grab weapons", false, function(state)
+    autoGrabWeaponsEnabled = state
+end)
 
 weaponTeleportsChan:Seperator()
 
@@ -1315,6 +1357,36 @@ weaponTeleportsChan:Button("Grab Guns", function()
         end
         weaponCoolingDown = false
     end)
+end)
+
+RunService.Heartbeat:Connect(function()
+    if not autoGrabWeaponsEnabled then return end
+    if hasGunInBackpackOrChar() then return end
+
+    local team = LocalPlayer.Team and LocalPlayer.Team.Name or ""
+    if team == "Guards" then
+        if ownsGamePass(643697197) then
+            grabGunAtPosition(Vector3.new(847, 97, 2229)) -- M4A1
+        else
+            grabGunAtPosition(Vector3.new(813, 97, 2229)) -- MP5
+        end
+        grabGunAtPosition(Vector3.new(820, 97, 2229)) -- Shotgun
+    elseif team == "Inmates" then
+        if ownsGamePass(643697197) then
+            grabGunAtPosition(Vector3.new(847, 97, 2229)) -- M4A1
+        else
+            grabGunAtPosition(Vector3.new(813, 97, 2229)) -- MP5
+        end
+        grabGunAtPosition(Vector3.new(820, 97, 2229)) -- Shotgun
+    elseif team == "Criminals" then
+        if ownsGamePass(1443271) then
+            grabGunAtPosition(Vector3.new(-902, 91, 2047)) -- FAL
+        else
+            grabGunAtPosition(Vector3.new(-931, 91, 2039)) -- AK47
+        end
+        grabGunAtPosition(Vector3.new(-938, 91, 2039)) -- Shotgun
+    end
+    task.wait(2)
 end)
 
 aimSettingsChannel:Dropdown(
