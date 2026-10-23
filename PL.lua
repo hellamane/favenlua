@@ -4,20 +4,66 @@
 local DiscordLib = loadstring(game:HttpGet"https://raw.githubusercontent.com/dawid-scripts/UI-Libs/main/discord%20lib.txt")()
 
 local win = DiscordLib:Window("faven.lua")
+
+local homeServer = win:Server("Home", "")
+local welcomeChan = homeServer:Channel("Welcome")
+
+welcomeChan:Label("Welcome to faven.lua!")
+welcomeChan:Label("Game: Prison Life")
+welcomeChan:Label("Status: Active & Optimized")
+welcomeChan:Label("Enjoy your script session.")
+
 local toolsServer = win:Server("Tools", "")
 local playerConfigChan = toolsServer:Channel("Player Configurations")
-local toolsChan = toolsServer:Channel("Tools")
+local targetPlayerChan = toolsServer:Channel("Target Player")
+
+local weaponsServer = win:Server("Weapons", "")
+local weaponTeleportsChan = weaponsServer:Channel("Weapons")
+local aimSettingsChannel = weaponsServer:Channel("Aim Settings")
+local weaponModsChan = weaponsServer:Channel("Weapon Mods")
+
+local vehicleServer = win:Server("Vehicle", "")
+local vehicleChannel = vehicleServer:Channel("Vehicle Controls")
+
+local Teleports = win:Server("Teleports", "")
+local tpChannel = Teleports:Channel("Locations")
+
+local settingsServer = win:Server("Settings", "")
+local settingsChannel = settingsServer:Channel("Settings & Misc")
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local StarterGui = game:GetService("StarterGui")
+local MarketplaceService = game:GetService("MarketplaceService")
+
+local GunRemotes = ReplicatedStorage:FindFirstChild("GunRemotes")
+local ShootEvent = GunRemotes and GunRemotes:FindFirstChild("ShootEvent")
 
 local VirtualInputService = nil
 pcall(function()
     VirtualInputService = game:GetService("VirtualInputService")
 end)
+
+local function sendBadgeNotification(title, text)
+    pcall(function()
+        StarterGui:SetCore("SendNotification", {
+            Title = title,
+            Text = text,
+            Duration = 3
+        })
+    end)
+end
+
+local function ownsGamePass(passId)
+    local success, result = pcall(function()
+        return MarketplaceService:UserOwnsGamePassAsync(LocalPlayer.UserId, passId)
+    end)
+    return success and result
+end
 
 local HitboxEnabled = false
 local Connections = {}
@@ -112,6 +158,7 @@ local aimlockMode = "None"
 local Aiming = false
 local currentTarget = nil
 local lastAttacker = nil
+local aimlockKey = Enum.KeyCode.RightShift
 
 local toggleSound = Instance.new("Sound")
 toggleSound.SoundId = "rbxassetid://12221967"
@@ -152,7 +199,7 @@ local function GetClosestToMouse(filterTeam)
                     end
                 end
             end
-        elseif aimlockMode == "Standard Aimlock" then
+        elseif aimlockMode == "All Teams Aimlock" then
             if IsValidTarget(plr, true) then
                 local head = plr.Character.Head
                 local screenPos, onScreen = cam:WorldToViewportPoint(head.Position)
@@ -187,7 +234,7 @@ RunService.RenderStepped:Connect(function()
         if aimlockMode == "Guard/Crim Aimlock" and lastAttacker and IsValidTarget(lastAttacker, false) then
             currentTarget = lastAttacker
         else
-            currentTarget = GetClosestToMouse(aimlockMode == "Standard Aimlock")
+            currentTarget = GetClosestToMouse(aimlockMode == "All Teams Aimlock")
         end
 
         if currentTarget and currentTarget.Character and currentTarget.Character:FindFirstChild("Head") then
@@ -199,8 +246,6 @@ RunService.RenderStepped:Connect(function()
         end
     end
 end)
-
-playerConfigChan:Seperator()
 
 local ESPEnabled = false
 local espData = {}
@@ -475,8 +520,8 @@ local selectedTargetPlayer = nil
 local playerConfigEnabled = false
 local autoFistEnabled = false
 local autoKillEnabled = false
+local autoArrestEnabled = false
 local autoResetEnabled = false
-local forcefieldCheckEnabled = true
 local originalPositionBeforeTarget = nil
 local isExecutingTargetAction = false
 
@@ -487,19 +532,13 @@ for _, p in ipairs(Players:GetPlayers()) do
     end
 end
 
-local playerDropdown = toolsChan:Dropdown("Select Target Player", playerNames, function(choice)
+local playerDropdown = targetPlayerChan:Dropdown("Select Target Player", playerNames, function(choice)
     selectedTargetPlayer = Players:FindFirstChild(choice)
 end)
 
-toolsChan:Seperator()
+targetPlayerChan:Seperator()
 
-toolsChan:Toggle("Forcefield Check", true, function(state)
-    forcefieldCheckEnabled = state
-end)
-
-toolsChan:Seperator()
-
-toolsChan:Button("Refresh Players", function()
+targetPlayerChan:Button("Refresh Players", function()
     pcall(function()
         playerDropdown:Clear()
         for _, p in ipairs(Players:GetPlayers()) do
@@ -510,27 +549,45 @@ toolsChan:Button("Refresh Players", function()
     end)
 end)
 
-toolsChan:Seperator()
+targetPlayerChan:Seperator()
 
-toolsChan:Toggle("Enable Target Features", false, function(state)
+targetPlayerChan:Toggle("Enable Target Features", false, function(state)
     playerConfigEnabled = state
+    if not state and isExecutingTargetAction and originalPositionBeforeTarget then
+        local char = LocalPlayer.Character
+        if char and char:FindFirstChild("HumanoidRootPart") then
+            char.HumanoidRootPart.CFrame = originalPositionBeforeTarget
+            local hum = char:FindFirstChildOfClass("Humanoid")
+            if hum then hum.PlatformStand = false end
+            for _, part in ipairs(char:GetDescendants()) do
+                if part:IsA("BasePart") then part.CanCollide = true end
+            end
+        end
+        isExecutingTargetAction = false
+    end
 end)
 
-toolsChan:Seperator()
+targetPlayerChan:Seperator()
 
-toolsChan:Toggle("Auto Fist", false, function(state)
+targetPlayerChan:Toggle("Auto Fist", false, function(state)
     autoFistEnabled = state
 end)
 
-toolsChan:Seperator()
+targetPlayerChan:Seperator()
 
-toolsChan:Toggle("Auto Kill", false, function(state)
+targetPlayerChan:Toggle("Auto Kill", false, function(state)
     autoKillEnabled = state
 end)
 
-toolsChan:Seperator()
+targetPlayerChan:Seperator()
 
-toolsChan:Toggle("Auto Reset", false, function(state)
+targetPlayerChan:Toggle("Auto Arrest", false, function(state)
+    autoArrestEnabled = state
+end)
+
+targetPlayerChan:Seperator()
+
+targetPlayerChan:Toggle("Auto Reset", false, function(state)
     autoResetEnabled = state
 end)
 
@@ -566,68 +623,181 @@ local function hasGunInBackpackOrChar()
     return weaponsFound
 end
 
-local function getClosestGunAndGrab(gunType)
-    local targetPos = nil
-    if gunType == "Shotgun" then
-        local guardPos = Vector3.new(820, 97, 2229)
-        local crimPos = Vector3.new(-938, 91, 2039)
-        local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-        if hrp then
-            targetPos = (hrp.Position - guardPos).Magnitude < (hrp.Position - crimPos).Magnitude and guardPos or crimPos
-        else
-            targetPos = guardPos
-        end
-    else
-        targetPos = Vector3.new(-931, 91, 2039)
-    end
+local function grabGunAtPosition(targetPos)
+    local char = LocalPlayer.Character
+    if not char then return end
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
 
     local targetObj = getTouchGiverFast(targetPos)
+    if not targetObj then return end
 
-    if targetObj and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-        local hrp = LocalPlayer.Character.HumanoidRootPart
-        local originalCF = targetObj.CFrame
-        local originalAnchored = targetObj.Anchored
-        local originalCanCollide = targetObj.CanCollide
+    local originalCF = hrp.CFrame
+    local originalPlatformStand = char:FindFirstChildOfClass("Humanoid") and char:FindFirstChildOfClass("Humanoid").PlatformStand or false
 
-        pcall(function()
-            targetObj.Anchored = true
-            targetObj.CanCollide = false
-            targetObj.CFrame = hrp.CFrame
-            task.wait(0.05)
-            firetouchinterest(hrp, targetObj, 0)
-            firetouchinterest(hrp, targetObj, 1)
-            task.wait(0.05)
-            targetObj.CFrame = originalCF
-            targetObj.Anchored = originalAnchored
-            targetObj.CanCollide = originalCanCollide
-        end)
+    for _, part in ipairs(char:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.CanCollide = false
+        end
     end
+
+    local toolCountBefore = #LocalPlayer.Backpack:GetChildren()
+
+    pcall(function()
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if hum then hum.PlatformStand = true end
+
+        local tweenInfo = TweenInfo.new(0.05, Enum.EasingStyle.Linear)
+        local tweenTo = TweenService:Create(hrp, tweenInfo, {CFrame = CFrame.new(targetPos) + Vector3.new(0, 3, 0)})
+        tweenTo:Play()
+        tweenTo.Completed:Wait()
+
+        local t = 0
+        while t < 0.6 and #LocalPlayer.Backpack:GetChildren() <= toolCountBefore do
+            task.wait(0.05)
+            t += 0.05
+        end
+
+        local tweenBack = TweenService:Create(hrp, tweenInfo, {CFrame = originalCF})
+        tweenBack:Play()
+        tweenBack.Completed:Wait()
+    end)
+
+    task.delay(0.1, function()
+        for _, part in ipairs(char:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = true
+            end
+        end
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if hum then
+            hum.PlatformStand = originalPlatformStand
+        end
+    end)
+end
+
+local function getBestWeapon()
+    local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+    if hasGunInBackpackOrChar() then return end
+
+    local crimPos = Vector3.new(-931, 91, 2039)
+    local falPos = Vector3.new(-902, 91, 2047)
+    local mp5Pos = Vector3.new(813, 97, 2229)
+    local m4Pos = Vector3.new(847, 97, 2229)
+
+    local targetPos = mp5Pos
+    local distToCrim = (hrp.Position - Vector3.new(-943, 94, 2056)).Magnitude
+    local distToPris = (hrp.Position - Vector3.new(868, 40, 2342)).Magnitude
+
+    if distToCrim < distToPris then
+        if ownsGamePass(1443271) then
+            targetPos = falPos
+        else
+            targetPos = crimPos
+        end
+    else
+        if ownsGamePass(643697197) then
+            targetPos = m4Pos
+        else
+            targetPos = mp5Pos
+        end
+    end
+
+    grabGunAtPosition(targetPos)
+end
+
+local function canTargetPlayer(targetPlr)
+    if not LocalPlayer.Team or not targetPlr.Team then return true end
+    local localTeam = LocalPlayer.Team.Name
+    local targetTeam = targetPlr.Team.Name
+    
+    if localTeam == "Guards" and targetTeam == "Inmates" then
+        local hasWeapon = false
+        if targetPlr.Character then
+            for _, item in ipairs(targetPlr.Character:GetChildren()) do
+                if item:IsA("Tool") then
+                    local lname = item.Name:lower()
+                    if not lname:find("keycard") and not lname:find("card") and not lname:find("donut") and not lname:find("hammer") and not lname:find("taser") then
+                        hasWeapon = true
+                    end
+                end
+            end
+        end
+        local backpack = targetPlr:FindFirstChild("Backpack")
+        if backpack then
+            for _, item in ipairs(backpack:GetChildren()) do
+                if item:IsA("Tool") then
+                    local lname = item.Name:lower()
+                    if not lname:find("keycard") and not lname:find("card") and not lname:find("donut") and not lname:find("hammer") and not lname:find("taser") then
+                        hasWeapon = true
+                    end
+                end
+            end
+        end
+        
+        if lastAttacker == targetPlr or hasWeapon then
+            return true
+        else
+            return false
+        end
+    end
+    return true
 end
 
 RunService.Heartbeat:Connect(function()
     if not playerConfigEnabled then 
-        isExecutingTargetAction = false
-        return 
-    end
-    if not selectedTargetPlayer or not selectedTargetPlayer.Character then return end
-    
-    local targetChar = selectedTargetPlayer.Character
-    local targetHum = targetChar:FindFirstChildOfClass("Humanoid")
-    local targetHrp = targetChar:FindFirstChild("HumanoidRootPart")
-    if not targetHum or not targetHrp or targetHum.Health <= 0 then 
-        isExecutingTargetAction = false
-        return 
-    end
-
-    if forcefieldCheckEnabled and targetChar:FindFirstChildOfClass("ForceField") then
         if isExecutingTargetAction and originalPositionBeforeTarget then
             local char = LocalPlayer.Character
             if char and char:FindFirstChild("HumanoidRootPart") then
                 char.HumanoidRootPart.CFrame = originalPositionBeforeTarget
+                local hum = char:FindFirstChildOfClass("Humanoid")
+                if hum then hum.PlatformStand = false end
+                for _, part in ipairs(char:GetDescendants()) do
+                    if part:IsA("BasePart") then part.CanCollide = true end
+                end
+            end
+            isExecutingTargetAction = false
+        end
+        return 
+    end
+    if not selectedTargetPlayer or not selectedTargetPlayer.Character then return end
+    
+    if not canTargetPlayer(selectedTargetPlayer) then
+        if isExecutingTargetAction and originalPositionBeforeTarget then
+            local char = LocalPlayer.Character
+            if char and char:FindFirstChild("HumanoidRootPart") then
+                char.HumanoidRootPart.CFrame = originalPositionBeforeTarget
+                local hum = char:FindFirstChildOfClass("Humanoid")
+                if hum then hum.PlatformStand = false end
+                for _, part in ipairs(char:GetDescendants()) do
+                    if part:IsA("BasePart") then part.CanCollide = true end
+                end
             end
             isExecutingTargetAction = false
         end
         return
+    end
+
+    local targetChar = selectedTargetPlayer.Character
+    local targetHum = targetChar:FindFirstChildOfClass("Humanoid")
+    local targetHrp = targetChar:FindFirstChild("HumanoidRootPart")
+    local targetTorso = targetChar:FindFirstChild("Torso") or targetChar:FindFirstChild("UpperTorso") or targetHrp
+
+    if not targetHum or not targetHrp or not targetTorso or targetHum.Health <= 0 then 
+        if isExecutingTargetAction and originalPositionBeforeTarget then
+            local char = LocalPlayer.Character
+            if char and char:FindFirstChild("HumanoidRootPart") then
+                char.HumanoidRootPart.CFrame = originalPositionBeforeTarget
+                local hum = char:FindFirstChildOfClass("Humanoid")
+                if hum then hum.PlatformStand = false end
+                for _, part in ipairs(char:GetDescendants()) do
+                    if part:IsA("BasePart") then part.CanCollide = true end
+                end
+            end
+            isExecutingTargetAction = false
+        end
+        return 
     end
 
     local char = LocalPlayer.Character
@@ -639,22 +809,29 @@ RunService.Heartbeat:Connect(function()
     if not isExecutingTargetAction then
         originalPositionBeforeTarget = hrp.CFrame
         isExecutingTargetAction = true
+        sendBadgeNotification("faven.lua", "Targeting player: " .. selectedTargetPlayer.Name)
     end
 
-    hrp.CFrame = targetHrp.CFrame * CFrame.new(0, 0, 2)
+    hum.PlatformStand = true
+    for _, part in ipairs(char:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.CanCollide = false
+        end
+    end
+
+    hrp.CFrame = targetHrp.CFrame * CFrame.new(0, -3, 0)
 
     if autoFistEnabled then
         pcall(function()
             if VirtualInputService then
                 VirtualInputService:SendKeyEvent(true, Enum.KeyCode.F, false, game)
-                task.wait(0.05)
+                task.wait(0.02)
                 VirtualInputService:SendKeyEvent(false, Enum.KeyCode.F, false, game)
             end
         end)
     elseif autoKillEnabled then
         if not hasGunInBackpackOrChar() then
-            getClosestGunAndGrab("Shotgun")
-            getClosestGunAndGrab("AK-47")
+            getBestWeapon()
             task.wait(0.1)
         end
 
@@ -662,7 +839,10 @@ RunService.Heartbeat:Connect(function()
         if backpack then
             for _, item in ipairs(backpack:GetChildren()) do
                 if item:IsA("Tool") then
-                    item.Parent = char
+                    local name = item.Name:lower()
+                    if not name:find("taser") and not name:find("arrest") and not name:find("handcuff") and not name:find("keycard") then
+                        item.Parent = char
+                    end
                 end
             end
         end
@@ -670,15 +850,53 @@ RunService.Heartbeat:Connect(function()
         pcall(function()
             for _, tool in ipairs(char:GetChildren()) do
                 if tool:IsA("Tool") then
-                    local fireEvent = tool:FindFirstChild("FireEvent") or (tool:FindFirstChild("Handle") and tool.Handle:FindFirstChild("FireEvent"))
-                    if fireEvent and fireEvent:IsA("RemoteEvent") then
-                        fireEvent:FireServer(targetHrp.Position, targetHrp)
+                    local name = tool.Name:lower()
+                    if not name:find("taser") and not name:find("arrest") and not name:find("handcuff") and not name:find("keycard") then
+                        local fireEvent = tool:FindFirstChild("FireEvent") or (tool:FindFirstChild("Handle") and tool.Handle:FindFirstChild("FireEvent"))
+                        if fireEvent and fireEvent:IsA("RemoteEvent") then
+                            fireEvent:FireServer(targetTorso.Position, targetTorso)
+                        elseif ShootEvent then
+                            ShootEvent:FireServer({
+                                {
+                                    p = targetTorso.Position,
+                                    rayon = targetTorso.Position,
+                                    hit = targetTorso,
+                                    distance = 0
+                                }
+                            })
+                        end
                     end
                 end
             end
             mouse1press()
             task.wait(0.05)
             mouse1release()
+        end)
+    elseif autoArrestEnabled then
+        local backpack = LocalPlayer:FindFirstChild("Backpack")
+        if backpack then
+            for _, item in ipairs(backpack:GetChildren()) do
+                if item:IsA("Tool") then
+                    local name = item.Name:lower()
+                    if name:find("arrest") or name:find("handcuff") then
+                        item.Parent = char
+                    end
+                end
+            end
+        end
+        pcall(function()
+            for _, tool in ipairs(char:GetChildren()) do
+                if tool:IsA("Tool") then
+                    local name = tool.Name:lower()
+                    if name:find("arrest") or name:find("handcuff") then
+                        local handle = tool:FindFirstChild("Handle")
+                        if handle and firetouchinterest then
+                            firetouchinterest(handle, targetTorso, 0)
+                            firetouchinterest(handle, targetTorso, 1)
+                        end
+                    end
+                end
+            end
         end)
     end
 
@@ -690,12 +908,15 @@ RunService.Heartbeat:Connect(function()
                 hrp.CFrame = originalPositionBeforeTarget
             end
         end
+        hum.PlatformStand = false
+        for _, part in ipairs(char:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = true
+            end
+        end
         isExecutingTargetAction = false
     end
 end)
-
-local vehicleServer = win:Server("Vehicle", "")
-local vehicleChannel = vehicleServer:Channel("Vehicle Controls")
 
 local FLYING = false
 local vehicleflyspeed = 1
@@ -850,9 +1071,6 @@ vehicleChannel:Slider("Vehicle Speed", 1, 18, 1, function(value)
     vehicleflyspeed = value
 end)
 
-local Teleports = win:Server("Teleports", "")
-local tpChannel = Teleports:Channel("Locations")
-
 local teleportList = {
     ["Town Store"] = CFrame.new(438, 12, 1167),
     ["Secret Highway Room"] = CFrame.new(-36, 11, 1290),
@@ -873,6 +1091,7 @@ local teleportList = {
     ["Neutral Spawn"] = CFrame.new(868, 40, 2342)
 }
 
+local customTeleports = {}
 local selectedDest = nil
 local globalTeleportMethod = "CFrame"
 local isCoolingDown = false
@@ -894,6 +1113,30 @@ end)
 
 tpChannel:Seperator()
 
+tpChannel:Button("Clear Teleports", function()
+    for name, _ in pairs(customTeleports) do
+        teleportList[name] = nil
+    end
+    customTeleports = {}
+    pcall(function()
+        dropdown:Clear()
+        for name, _ in pairs(teleportList) do
+            dropdown:Add(name)
+        end
+    end)
+end)
+
+tpChannel:Seperator()
+
+tpChannel:Button("Set Spawn", function()
+    local char = LocalPlayer.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        customSpawnCF = char.HumanoidRootPart.CFrame
+    end
+end)
+
+tpChannel:Seperator()
+
 local keys = {}
 for name in pairs(teleportList) do
     table.insert(keys, name)
@@ -907,7 +1150,6 @@ tpChannel:Seperator()
 
 tpChannel:Button("Teleport Now", function()
     if not selectedDest then return end
-
     if isCoolingDown then return end
 
     local cf = teleportList[selectedDest]
@@ -919,51 +1161,36 @@ tpChannel:Button("Teleport Now", function()
     local hrp = char:FindFirstChild("HumanoidRootPart")
     if not hrp then return end
 
-    local distance = (hrp.Position - cf.Position).Magnitude
-    if distance > 300 then return end
-
     for _, part in ipairs(char:GetDescendants()) do
         if part:IsA("BasePart") then
             part.CanCollide = false
         end
     end
 
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    local originalPlatformStand = hum and hum.PlatformStand or false
+    if hum then hum.PlatformStand = true end
+
     if globalTeleportMethod == "CFrame" then
         hrp.CFrame = cf + Vector3.new(0, 3, 0)
-    elseif globalTeleportMethod == "Tween" then
-        local downTween = TweenService:Create(
-            hrp,
-            TweenInfo.new(0.15, Enum.EasingStyle.Linear),
-            {CFrame = hrp.CFrame * CFrame.new(0, -5, 0)}
-        )
-        downTween:Play()
-        downTween.Completed:Wait()
-
-        local undergroundTarget = CFrame.new(cf.X, cf.Y - 5, cf.Z)
-        local travelTime = math.clamp(distance / 250, 0.2, 1.2)
-
-        local tpTween = TweenService:Create(
-            hrp,
-            TweenInfo.new(travelTime, Enum.EasingStyle.Linear),
-            {CFrame = undergroundTarget}
-        )
-        tpTween:Play()
-        tpTween.Completed:Wait()
-
-        TweenService:Create(
-            hrp,
-            TweenInfo.new(0.2, Enum.EasingStyle.Linear),
-            {CFrame = cf + Vector3.new(0, 3, 0)}
-        ):Play()
-    end
-
-    task.delay(0.4, function()
+        if hum then hum.PlatformStand = originalPlatformStand end
         for _, part in ipairs(char:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = true
-            end
+            if part:IsA("BasePart") then part.CanCollide = true end
         end
-    end)
+    elseif globalTeleportMethod == "Tween" then
+        pcall(function()
+            local tweenInfo = TweenInfo.new(0.05, Enum.EasingStyle.Linear)
+            local tweenTo = TweenService:Create(hrp, tweenInfo, {CFrame = cf + Vector3.new(0, 3, 0)})
+            tweenTo:Play()
+            tweenTo.Completed:Wait()
+        end)
+        if hum then hum.PlatformStand = originalPlatformStand end
+        task.delay(0.1, function()
+            for _, part in ipairs(char:GetDescendants()) do
+                if part:IsA("BasePart") then part.CanCollide = true end
+            end
+        end)
+    end
 
     isCoolingDown = true
     coolDownTimer = 3
@@ -979,22 +1206,6 @@ end)
 
 tpChannel:Seperator()
 
-tpChannel:Button("Set Spawn", function()
-    local char = LocalPlayer.Character
-    if char and char:FindFirstChild("HumanoidRootPart") then
-        customSpawnCF = char.HumanoidRootPart.CFrame
-    end
-end)
-
-tpChannel:Seperator()
-
-tpChannel:Button("Clear Teleports", function()
-    teleportList = {}
-    dropdown:Clear()
-end)
-
-tpChannel:Seperator()
-
 tpChannel:Button("Add Custom CFrame", function()
     local char = LocalPlayer.Character
     if not char then return end
@@ -1004,13 +1215,9 @@ tpChannel:Button("Add Custom CFrame", function()
 
     local name = "Custom_" .. tostring(math.random(1000, 9999))
     teleportList[name] = hrp.CFrame
+    customTeleports[name] = hrp.CFrame
     dropdown:Add(name)
 end)
-
-local weaponsServer = win:Server("Weapons", "")
-local weaponTeleportsChan = weaponsServer:Channel("Weapons")
-local weaponSkinsChan = weaponsServer:Channel("Weapon Skins")
-local weaponModsChan = weaponsServer:Channel("Weapon Mods")
 
 local weaponLocations = {
     ["MP5 Guards"] = Vector3.new(813, 97, 2229),
@@ -1044,7 +1251,6 @@ weaponTeleportsChan:Seperator()
 
 weaponTeleportsChan:Button("Grab Guns", function()
     if not selectedWeapon then return end
-
     if weaponCoolingDown then return end
 
     local char = LocalPlayer.Character
@@ -1054,27 +1260,49 @@ weaponTeleportsChan:Button("Grab Guns", function()
     if not hrp then return end
 
     local targetPos = weaponLocations[selectedWeapon]
-    local targetObj = getTouchGiverFast(targetPos)
+    if not targetPos then return end
 
-    if not targetObj then return end
+    local originalCF = hrp.CFrame
+    local originalPlatformStand = char:FindFirstChildOfClass("Humanoid") and char:FindFirstChildOfClass("Humanoid").PlatformStand or false
 
-    local originalCF = targetObj.CFrame
-    local originalAnchored = targetObj.Anchored
-    local originalCanCollide = targetObj.CanCollide
+    for _, part in ipairs(char:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.CanCollide = false
+        end
+    end
+
+    local toolCountBefore = #LocalPlayer.Backpack:GetChildren()
 
     pcall(function()
-        targetObj.Anchored = true
-        targetObj.CanCollide = false
-        targetObj.CFrame = hrp.CFrame
-        task.wait(0.05)
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if hum then hum.PlatformStand = true end
 
-        firetouchinterest(hrp, targetObj, 0)
-        firetouchinterest(hrp, targetObj, 1)
-        task.wait(0.05)
+        local tweenInfo = TweenInfo.new(0.05, Enum.EasingStyle.Linear)
+        local tweenTo = TweenService:Create(hrp, tweenInfo, {CFrame = CFrame.new(targetPos) + Vector3.new(0, 3, 0)})
+        tweenTo:Play()
+        tweenTo.Completed:Wait()
 
-        targetObj.CFrame = originalCF
-        targetObj.Anchored = originalAnchored
-        targetObj.CanCollide = originalCanCollide
+        local t = 0
+        while t < 0.6 and #LocalPlayer.Backpack:GetChildren() <= toolCountBefore do
+            task.wait(0.05)
+            t += 0.05
+        end
+
+        local tweenBack = TweenService:Create(hrp, tweenInfo, {CFrame = originalCF})
+        tweenBack:Play()
+        tweenBack.Completed:Wait()
+    end)
+
+    task.delay(0.1, function()
+        for _, part in ipairs(char:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = true
+            end
+        end
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if hum then
+            hum.PlatformStand = originalPlatformStand
+        end
     end)
 
     weaponCoolingDown = true
@@ -1089,44 +1317,9 @@ weaponTeleportsChan:Button("Grab Guns", function()
     end)
 end)
 
-weaponSkinsChan:Button("Apply Gold Skin to All", function()
-    local char = LocalPlayer.Character
-    if not char then return end
-    for _, tool in ipairs(char:GetChildren()) do
-        if tool:IsA("Tool") then
-            for _, part in ipairs(tool:GetDescendants()) do
-                if part:IsA("BasePart") then
-                    part.Color = Color3.fromRGB(255, 215, 0)
-                end
-            end
-        end
-    end
-end)
-
-weaponModsChan:Button("Instant Reload Mod", function()
-    local char = LocalPlayer.Character
-    if not char then return end
-    for _, tool in ipairs(char:GetChildren()) do
-        if tool:IsA("Tool") then
-            for _, v in ipairs(tool:GetDescendants()) do
-                if v:IsA("NumberValue") or v:IsA("IntValue") then
-                    local vName = v.Name:lower()
-                    if vName:find("reload") or vName:find("cooldown") then
-                        v.Value = 0
-                    end
-                end
-            end
-        end
-    end
-end)
-
-local settingsServer = win:Server("Settings", "")
-local aimSettingsChannel = settingsServer:Channel("Aim Settings")
-local settingsChannel = settingsServer:Channel("Settings & Misc")
-
 aimSettingsChannel:Dropdown(
     "Aimlock Mode",
-    {"None", "Standard Aimlock", "Guard/Crim Aimlock"},
+    {"None", "All Teams Aimlock", "Guard/Crim Aimlock"},
     function(choice)
         aimlockMode = choice
     end
@@ -1134,16 +1327,31 @@ aimSettingsChannel:Dropdown(
 
 aimSettingsChannel:Seperator()
 
-aimSettingsChannel:Bind(
+aimSettingsChannel:Textbox(
     "Aimlock Keybind",
-    Enum.KeyCode.RightShift,
-    function()
-        if aimlockMode ~= "None" then
-            Aiming = not Aiming
-            toggleSound:Play()
+    "Type key (e.g. Q, E, F)",
+    false,
+    function(text)
+        local keyName = text:upper()
+        if Enum.KeyCode[keyName] then
+            aimlockKey = Enum.KeyCode[keyName]
+            sendBadgeNotification("faven.lua", "Keybind changed to " .. keyName)
         end
     end
 )
+
+aimSettingsChannel:Seperator()
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == aimlockKey then
+        if aimlockMode ~= "None" then
+            Aiming = not Aiming
+            toggleSound:Play()
+            sendBadgeNotification("faven.lua", "Aimlock is " .. (Aiming and "On" or "Off"))
+        end
+    end
+end)
 
 aimSettingsChannel:Seperator()
 
@@ -1162,6 +1370,23 @@ RunService.RenderStepped:Connect(function()
                 mouse1press()
                 task.wait(0.05)
                 mouse1release()
+            end
+        end
+    end
+end)
+
+weaponModsChan:Button("Instant Reload Mod", function()
+    local char = LocalPlayer.Character
+    if not char then return end
+    for _, tool in ipairs(char:GetChildren()) do
+        if tool:IsA("Tool") then
+            for _, v in ipairs(tool:GetDescendants()) do
+                if v:IsA("NumberValue") or v:IsA("IntValue") then
+                    local vName = v.Name:lower()
+                    if vName:find("reload") or vName:find("cooldown") then
+                        v.Value = 0
+                    end
+                end
             end
         end
     end
