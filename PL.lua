@@ -10,7 +10,8 @@ local welcomeChan = homeServer:Channel("Welcome")
 
 welcomeChan:Label("Welcome to faven.lua!")
 welcomeChan:Label("Game: Prison Life")
-welcomeChan:Label("All my stuff is free show me support!")
+welcomeChan:Label("Status: Active & Optimized")
+welcomeChan:Label("Enjoy your script session.")
 
 local toolsServer = win:Server("Tools", "")
 local playerConfigChan = toolsServer:Channel("Player Configurations")
@@ -596,24 +597,24 @@ targetPlayerChan:Button("Arrest Player", function()
 
     task.spawn(function()
         local targetPlr = selectedTargetPlayer
-        sendBadgeNotification("faven.lua", "Waiting for " .. targetPlr.Name .. " to change team to Inmate...")
-
-        local currentTeam = targetPlr.Team and targetPlr.Team.Name
-        while targetPlr and targetPlr.Parent and targetPlr.Team and targetPlr.Team.Name == currentTeam do
-            task.wait(0.5)
-        end
-
-        if not targetPlr or not targetPlr.Team or targetPlr.Team.Name ~= "Inmates" then
-            sendBadgeNotification("faven.lua", "Error: Player did not switch to Inmate team!")
-            return
-        end
-
-        sendBadgeNotification("faven.lua", targetPlr.Name .. " is now an Inmate. Attempting arrest...")
-
         local char = LocalPlayer.Character
         if not char then return end
         local hrp = char:FindFirstChild("HumanoidRootPart")
         if not hrp then return end
+
+        local originalPos = hrp.CFrame
+        sendBadgeNotification("faven.lua", "Attempting to arrest " .. targetPlr.Name .. "...")
+
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if hum then
+            hum.Sit = false
+            hum:SetStateEnabled(Enum.HumanoidStateType.Seated, false)
+            hum.PlatformStand = true
+        end
+
+        for _, part in ipairs(char:GetDescendants()) do
+            if part:IsA("BasePart") then part.CanCollide = false end
+        end
 
         local backpack = LocalPlayer:FindFirstChild("Backpack")
         if backpack then
@@ -624,31 +625,58 @@ targetPlayerChan:Button("Arrest Player", function()
             end
         end
 
-        local targetChar = targetPlr.Character
-        local targetTorso = targetChar and (targetChar:FindFirstChild("Torso") or targetChar:FindFirstChild("UpperTorso") or targetChar:FindFirstChild("HumanoidRootPart"))
-        
-        if not targetTorso then
-            sendBadgeNotification("faven.lua", "Error: Target torso not found for arrest!")
-            return
-        end
-
+        local initialTeam = targetPlr.Team and targetPlr.Team.Name or ""
+        local startTime = tick()
         local success = false
-        pcall(function()
-            for _, tool in ipairs(char:GetChildren()) do
-                if tool:IsA("Tool") and (tool.Name:lower():find("arrest") or tool.Name:lower():find("handcuff")) then
-                    local handle = tool:FindFirstChild("Handle")
-                    if handle and firetouchinterest then
-                        firetouchinterest(handle, targetTorso, 0)
-                        firetouchinterest(handle, targetTorso, 1)
-                        success = true
+
+        while targetPlr and targetPlr.Parent and targetPlr.Character and tick() - startTime < 12 do
+            local targetChar = targetPlr.Character
+            local targetTorso = targetChar:FindFirstChild("Torso") or targetChar:FindFirstChild("UpperTorso") or targetChar:FindFirstChild("HumanoidRootPart")
+            local targetHum = targetChar:FindFirstChildOfClass("Humanoid")
+            
+            if not targetHum or targetHum.Health <= 0 then break end
+            if targetTorso and hrp then
+                hrp.CFrame = targetTorso.CFrame * CFrame.new(0, 0, 2)
+            end
+
+            pcall(function()
+                for _, tool in ipairs(char:GetChildren()) do
+                    if tool:IsA("Tool") and (tool.Name:lower():find("arrest") or tool.Name:lower():find("handcuff")) then
+                        local handle = tool:FindFirstChild("Handle")
+                        if handle and firetouchinterest then
+                            firetouchinterest(handle, targetTorso, 0)
+                            firetouchinterest(handle, targetTorso, 1)
+                        end
                     end
                 end
+            end)
+
+            -- Wait for them to change team after being arrested (Criminal -> Inmate)
+            local currentTeam = targetPlr.Team and targetPlr.Team.Name or ""
+            if currentTeam ~= initialTeam then
+                success = true
+                sendBadgeNotification("faven.lua", targetPlr.Name .. " was successfully arrested and team changed to " .. currentTeam .. "!")
+                break
             end
-        end)
+
+            task.wait(0.2)
+        end
 
         if not success then
-            sendBadgeNotification("faven.lua", "Error: Failed to execute arrest on target player!")
+            sendBadgeNotification("faven.lua", "Arrest Error: Failed to arrest target or team did not change!")
         end
+
+        -- Return to original position after arrest is done/processed
+        hrp.CFrame = originalPos
+        if hum then
+            hum.PlatformStand = false
+            hum:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
+        end
+        task.delay(0.1, function()
+            for _, part in ipairs(char:GetDescendants()) do
+                if part:IsA("BasePart") then part.CanCollide = true end
+            end
+        end)
     end)
 end)
 
@@ -898,7 +926,15 @@ RunService.Heartbeat:Connect(function()
             end
         end)
     elseif autoKillEnabled then
-        hrp.CFrame = targetHrp.CFrame * CFrame.new(0, 0, 3)
+        -- 360 circle orbit around the target player
+        local orbitAngle = tick() * 8
+        local orbitRadius = 7
+        local offsetX = math.cos(orbitAngle) * orbitRadius
+        local offsetZ = math.sin(orbitAngle) * orbitRadius
+        hrp.CFrame = CFrame.new(targetHrp.Position + Vector3.new(offsetX, 0, offsetZ), targetHrp.Position)
+
+        -- Lock camera onto the target player
+        workspace.CurrentCamera.CFrame = CFrame.new(workspace.CurrentCamera.CFrame.Position, targetHrp.Position)
 
         if not hasGunInBackpackOrChar() then
             getBestWeapon()
@@ -910,7 +946,8 @@ RunService.Heartbeat:Connect(function()
             for _, item in ipairs(backpack:GetChildren()) do
                 if item:IsA("Tool") then
                     local name = item.Name:lower()
-                    if not name:find("taser") and not name:find("arrest") and not name:find("handcuff") and not name:find("keycard") then
+                    -- Filter out lunch and unwanted non-combat tools
+                    if not (name:find("taser") or name:find("arrest") or name:find("handcuff") or name:find("keycard") or name:find("card") or name:find("donut") or name:find("hammer") or name:find("lunch")) then
                         item.Parent = char
                     end
                 end
@@ -918,24 +955,36 @@ RunService.Heartbeat:Connect(function()
         end
 
         pcall(function()
+            -- Equip and prioritize Shotgun first, then rifles next
+            local shotgunTool, rifleTool
             for _, tool in ipairs(char:GetChildren()) do
                 if tool:IsA("Tool") then
                     local name = tool.Name:lower()
-                    if not name:find("taser") and not name:find("arrest") and not name:find("handcuff") and not name:find("keycard") then
-                        local fireEvent = tool:FindFirstChild("FireEvent") or (tool:FindFirstChild("Handle") and tool.Handle:FindFirstChild("FireEvent"))
-                        if fireEvent and fireEvent:IsA("RemoteEvent") then
-                            fireEvent:FireServer(targetTorso.Position, targetTorso)
-                        elseif ShootEvent then
-                            ShootEvent:FireServer({
-                                {
-                                    p = targetTorso.Position,
-                                    rayon = targetTorso.Position,
-                                    hit = targetTorso,
-                                    distance = 0
-                                }
-                            })
+                    if not (name:find("taser") or name:find("arrest") or name:find("handcuff") or name:find("keycard") or name:find("card") or name:find("donut") or name:find("hammer") or name:find("lunch")) then
+                        if name:find("remington") then
+                            shotgunTool = tool
+                        elseif name:find("ak") or name:find("m4") or name:find("fal") or name:find("m700") or name:find("mp5") then
+                            if not rifleTool then rifleTool = tool end
                         end
                     end
+                end
+            end
+
+            local chosenTool = shotgunTool or rifleTool
+            if chosenTool then
+                chosenTool.Parent = char
+                local fireEvent = chosenTool:FindFirstChild("FireEvent") or (chosenTool:FindFirstChild("Handle") and chosenTool.Handle:FindFirstChild("FireEvent"))
+                if fireEvent and fireEvent:IsA("RemoteEvent") then
+                    fireEvent:FireServer(targetTorso.Position, targetTorso)
+                elseif ShootEvent then
+                    ShootEvent:FireServer({
+                        {
+                            p = targetTorso.Position,
+                            rayon = targetTorso.Position,
+                            hit = targetTorso,
+                            distance = 0
+                        }
+                    })
                 end
             end
             mouse1press()
