@@ -651,7 +651,6 @@ targetPlayerChan:Button("Arrest Player", function()
                 end
             end)
 
-            -- Wait for them to change team after being arrested (Criminal -> Inmate)
             local currentTeam = targetPlr.Team and targetPlr.Team.Name or ""
             if currentTeam ~= initialTeam then
                 success = true
@@ -666,7 +665,6 @@ targetPlayerChan:Button("Arrest Player", function()
             sendBadgeNotification("faven.lua", "Arrest Error: Failed to arrest target or team did not change!")
         end
 
-        -- Return to original position after arrest is done/processed
         hrp.CFrame = originalPos
         if hum then
             hum.PlatformStand = false
@@ -849,7 +847,25 @@ RunService.Heartbeat:Connect(function()
         end
         return 
     end
-    if not selectedTargetPlayer or not selectedTargetPlayer.Character then return end
+
+    if not selectedTargetPlayer or not selectedTargetPlayer.Parent or not selectedTargetPlayer.Character then 
+        if isExecutingTargetAction and originalPositionBeforeTarget then
+            local char = LocalPlayer.Character
+            if char and char:FindFirstChild("HumanoidRootPart") then
+                char.HumanoidRootPart.CFrame = originalPositionBeforeTarget
+                local hum = char:FindFirstChildOfClass("Humanoid")
+                if hum then
+                    hum.PlatformStand = false
+                    hum:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
+                end
+                for _, part in ipairs(char:GetDescendants()) do
+                    if part:IsA("BasePart") then part.CanCollide = true end
+                end
+            end
+            isExecutingTargetAction = false
+        end
+        return 
+    end
     
     if not canTargetPlayer(selectedTargetPlayer) then
         if isExecutingTargetAction and originalPositionBeforeTarget then
@@ -871,9 +887,9 @@ RunService.Heartbeat:Connect(function()
     end
 
     local targetChar = selectedTargetPlayer.Character
-    local targetHum = targetChar:FindFirstChildOfClass("Humanoid")
-    local targetHrp = targetChar:FindFirstChild("HumanoidRootPart")
-    local targetTorso = targetChar:FindFirstChild("Torso") or targetChar:FindFirstChild("UpperTorso") or targetHrp
+    local targetHum = targetChar and targetChar:FindFirstChildOfClass("Humanoid")
+    local targetHrp = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
+    local targetTorso = targetChar and (targetChar:FindFirstChild("Torso") or targetChar:FindFirstChild("UpperTorso") or targetHrp)
 
     if not targetHum or not targetHrp or not targetTorso or targetHum.Health <= 0 then 
         if isExecutingTargetAction and originalPositionBeforeTarget then
@@ -926,14 +942,14 @@ RunService.Heartbeat:Connect(function()
             end
         end)
     elseif autoKillEnabled then
-        -- 360 circle orbit around the target player
+        -- 360 circle orbit around the target player strictly when active & alive
         local orbitAngle = tick() * 8
         local orbitRadius = 7
         local offsetX = math.cos(orbitAngle) * orbitRadius
         local offsetZ = math.sin(orbitAngle) * orbitRadius
         hrp.CFrame = CFrame.new(targetHrp.Position + Vector3.new(offsetX, 0, offsetZ), targetHrp.Position)
 
-        -- Lock camera onto the target player
+        -- Lock camera onto the target player strictly during active targeting loop
         workspace.CurrentCamera.CFrame = CFrame.new(workspace.CurrentCamera.CFrame.Position, targetHrp.Position)
 
         if not hasGunInBackpackOrChar() then
@@ -946,7 +962,6 @@ RunService.Heartbeat:Connect(function()
             for _, item in ipairs(backpack:GetChildren()) do
                 if item:IsA("Tool") then
                     local name = item.Name:lower()
-                    -- Filter out lunch and unwanted non-combat tools
                     if not (name:find("taser") or name:find("arrest") or name:find("handcuff") or name:find("keycard") or name:find("card") or name:find("donut") or name:find("hammer") or name:find("lunch")) then
                         item.Parent = char
                     end
@@ -955,7 +970,6 @@ RunService.Heartbeat:Connect(function()
         end
 
         pcall(function()
-            -- Equip and prioritize Shotgun first, then rifles next
             local shotgunTool, rifleTool
             for _, tool in ipairs(char:GetChildren()) do
                 if tool:IsA("Tool") then
