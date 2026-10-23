@@ -606,7 +606,7 @@ targetPlayerChan:Button("Arrest Player", function()
             return
         end
 
-        sendBadgeNotification("faven.lua", targetPlr.Name + " is now an Inmate. Attempting arrest...")
+        sendBadgeNotification("faven.lua", targetPlr.Name .. " is now an Inmate. Attempting arrest...")
 
         local char = LocalPlayer.Character
         if not char then return end
@@ -707,7 +707,7 @@ local function grabGunAtPosition(targetPos)
         if hum then hum.PlatformStand = true end
 
         local tweenInfo = TweenInfo.new(0.05, Enum.EasingStyle.Linear)
-        local tweenTo = TweenService:Create(hrp, tweenInfo, {CFrame = CFrame.new(targetPos) + Vector3.new(0, 3, 0)})
+        local tweenTo = TweenService:Create(hrp, tweenInfo, {CFrame = CFrame.new(targetPos)})
         tweenTo:Play()
         tweenTo.Completed:Wait()
 
@@ -868,7 +868,7 @@ RunService.Heartbeat:Connect(function()
     if not isExecutingTargetAction then
         originalPositionBeforeTarget = hrp.CFrame
         isExecutingTargetAction = true
-        sendBadgeNotification("faven.lua", "Targeting player: " + selectedTargetPlayer.Name)
+        sendBadgeNotification("faven.lua", "Targeting player: " .. selectedTargetPlayer.Name)
     end
 
     hum.PlatformStand = true
@@ -1285,7 +1285,7 @@ weaponTeleportsChan:Dropdown(
 
 weaponTeleportsChan:Seperator()
 
-weaponTeleportsChan:Toggle("Auto Grab weapons", false, function(state)
+weaponTeleportsChan:Toggle("Auto Grab Weapons", false, function(state)
     autoGrabWeaponsEnabled = state
 end)
 
@@ -1320,7 +1320,7 @@ weaponTeleportsChan:Button("Grab Guns", function()
         if hum then hum.PlatformStand = true end
 
         local tweenInfo = TweenInfo.new(0.05, Enum.EasingStyle.Linear)
-        local tweenTo = TweenService:Create(hrp, tweenInfo, {CFrame = CFrame.new(targetPos) + Vector3.new(0, 3, 0)})
+        local tweenTo = TweenService:Create(hrp, tweenInfo, {CFrame = CFrame.new(targetPos)})
         tweenTo:Play()
         tweenTo.Completed:Wait()
 
