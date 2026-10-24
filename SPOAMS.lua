@@ -10,13 +10,11 @@ if getgenv().aim == nil then
 end
 
 local function sendBadgeNotification(active)
-
 	local playerGui = LocalPlayer:WaitForChild("PlayerGui")
 	local screenGui = Instance.new("ScreenGui")
 	screenGui.Name = "BadgeNotification"
 	screenGui.Parent = playerGui
 	screenGui.ResetOnSpawn = false
-
 
 	local frame = Instance.new("Frame")
 	frame.Size = UDim2.new(0, 300, 0, 80)
@@ -29,7 +27,6 @@ local function sendBadgeNotification(active)
 	local uicorner = Instance.new("UICorner", frame)
 	uicorner.CornerRadius = UDim.new(0, 10)
 
-	-- Title label displays "faven.lua"
 	local titleLabel = Instance.new("TextLabel", frame)
 	titleLabel.Size = UDim2.new(1, 0, 0.4, 0)
 	titleLabel.BackgroundTransparency = 1
@@ -37,7 +34,6 @@ local function sendBadgeNotification(active)
 	titleLabel.Font = Enum.Font.SourceSansBold
 	titleLabel.TextSize = 22
 	titleLabel.TextColor3 = Color3.new(1, 1, 1)
-
 
 	local messageLabel = Instance.new("TextLabel", frame)
 	messageLabel.Position = UDim2.new(0, 0, 0.4, 0)
@@ -60,12 +56,11 @@ local function sendBadgeNotification(active)
 	end)
 end
 
-
 sendBadgeNotification(getgenv().aim)
 
 local lastAimState = getgenv().aim
 spawn(function()
-	while wait(0.1) do
+	while task.wait(0.1) do
 		if getgenv().aim ~= lastAimState then
 			lastAimState = getgenv().aim
 			sendBadgeNotification(getgenv().aim)
@@ -73,9 +68,10 @@ spawn(function()
 	end
 end)
 
-local shotDelay = 0.1
-local targetSearchInterval = 0.1
-local maxRange = 100
+local shotDelay = 0.05
+local maxRange = 150
+local predictionFactor = 0.12
+local cameraSmoothing = 0.85
 
 local function setupCharacter(character)
 	local head = character:WaitForChild("Head", 5)
@@ -86,7 +82,6 @@ local function setupCharacter(character)
 	local lockedTarget = nil
 	local currentAimPos = nil
 	local lastShotTime = tick()
-	local lastTargetSearchTime = tick()
 	
 	local function getNearestTarget()
 		local nearestTarget = nil
@@ -94,10 +89,10 @@ local function setupCharacter(character)
 		local localPos = head.Position
 
 		for _, player in ipairs(Players:GetPlayers()) do
-			if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Head") then
-				local tHead = player.Character.Head
+			if player ~= LocalPlayer and player.Character then
+				local tHead = player.Character:FindFirstChild("Head")
 				local tHumanoid = player.Character:FindFirstChild("Humanoid")
-				if tHumanoid and tHumanoid.Health > 0 then
+				if tHead and tHumanoid and tHumanoid.Health > 0 then
 					local distance = (tHead.Position - localPos).Magnitude
 					if distance <= maxRange and distance < smallestDistance then
 						smallestDistance = distance
@@ -121,7 +116,6 @@ local function setupCharacter(character)
 
 	local function startAim()
 		lastShotTime = tick()
-		lastTargetSearchTime = tick()
 		aimConnection = RunService.RenderStepped:Connect(function(deltaTime)
 			if not getgenv().aim then return end
 			
@@ -132,50 +126,28 @@ local function setupCharacter(character)
 			end
 
 			local currentTime = tick()
-			if currentTime - lastTargetSearchTime >= targetSearchInterval then
-				local candidate = getNearestTarget()
-				if candidate then
-					if lockedTarget then
-						local curDist = (lockedTarget.Position - head.Position).Magnitude
-						local candDist = (candidate.Position - head.Position).Magnitude
-						if candDist < curDist then
-							lockedTarget = candidate
-						end
-					else
-						lockedTarget = candidate
-					end
-				else
-					lockedTarget = nil
-				end
-				lastTargetSearchTime = currentTime
-			end
+			lockedTarget = getNearestTarget()
 
 			if lockedTarget then
 				local predictedPos = lockedTarget.Position
 				local hrp = lockedTarget.Parent:FindFirstChild("HumanoidRootPart")
+				
 				if hrp then
-					local horizontalVel = Vector3.new(hrp.Velocity.X, 0, hrp.Velocity.Z)
-					if horizontalVel.Magnitude > 0.1 then
-						local offset = horizontalVel * shotDelay
-						predictedPos = Vector3.new(
-							lockedTarget.Position.X + offset.X,
-							lockedTarget.Position.Y,
-							lockedTarget.Position.Z + offset.Z
-						)
-					else
-						predictedPos = lockedTarget.Position
+					local velocity = hrp.Velocity
+					if velocity.Magnitude > 0.1 then
+						predictedPos = lockedTarget.Position + (velocity * predictionFactor)
 					end
 				end
 
 				if currentAimPos then
-					currentAimPos = currentAimPos:Lerp(predictedPos, 0.25)
+					currentAimPos = currentAimPos:Lerp(predictedPos, 0.7)
 				else
 					currentAimPos = predictedPos
 				end
 
 				local camCF = Camera.CFrame
 				local targetCF = CFrame.new(camCF.Position, currentAimPos)
-				Camera.CFrame = camCF:Lerp(targetCF, 0.1)
+				Camera.CFrame = camCF:Lerp(targetCF, cameraSmoothing)
 
 				if currentTime - lastShotTime >= shotDelay then
 					if currentTool and currentTool:FindFirstChild("RemoteBridge") then
@@ -188,17 +160,6 @@ local function setupCharacter(character)
 			end
 		end)
 	end
-
-	spawn(function()
-		while currentTool and currentTool.Parent == character do
-			if getgenv().aim and not aimConnection then
-				startAim()
-			elseif not getgenv().aim and aimConnection then
-				stopAim()
-			end
-			wait(0.1)
-		end
-	end)
 
 	local function attachTool(tool)
 		currentTool = tool
@@ -227,6 +188,7 @@ local function setupCharacter(character)
 	humanoid.Died:Connect(function()
 		stopAim()
 	end)
+	
 	character.AncestryChanged:Connect(function(_, parent)
 		if not parent then
 			stopAim()
@@ -239,6 +201,7 @@ LocalPlayer.CharacterAdded:Connect(function(character)
 		setupCharacter(character)
 	end)
 end)
+
 if LocalPlayer.Character then
 	setupCharacter(LocalPlayer.Character)
 end
