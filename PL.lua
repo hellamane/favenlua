@@ -28,6 +28,7 @@ local vehicleChannel = vehicleServer:Channel("Vehicle Controls")
 
 local Teleports = win:Server("Teleports", "")
 local tpChannel = Teleports:Channel("Locations")
+local tpMethodsChannel = Teleports:Channel("Methods & Spawn")
 
 local settingsServer = win:Server("Settings", "")
 local settingsChannel = settingsServer:Channel("Settings & Misc")
@@ -472,17 +473,25 @@ end)
 playerConfigChan:Seperator()
 
 local NoclipEnabled = false
-local OriginalPartCollisions = {}
+local NoclipConnection = nil
 
 playerConfigChan:Toggle("Noclip", false, function(state)
     NoclipEnabled = state
-    if not state then
-        for part, canCollide in pairs(OriginalPartCollisions) do
-            if part and part.Parent then
-                part.CanCollide = canCollide
+    if not state and NoclipConnection then
+        NoclipConnection:Disconnect()
+        NoclipConnection = nil
+    elseif state and not NoclipConnection then
+        NoclipConnection = RunService.Stepped:Connect(function()
+            if not NoclipEnabled then return end
+            local character = LocalPlayer.Character
+            if not character then return end
+            
+            for _, part in ipairs(character:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = false
+                end
             end
-        end
-        OriginalPartCollisions = {}
+        end)
     end
 end)
 
@@ -490,30 +499,16 @@ RunService.Stepped:Connect(function()
     if not NoclipEnabled then return end
     local character = LocalPlayer.Character
     if not character then return end
-    local hrp = character:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
-
-    local raycastParams = RaycastParams.new()
-    raycastParams.FilterType = Enum.RaycastFilterType.Exclude
-    raycastParams.FilterDescendantsInstances = {character}
-
-    local rayResult = workspace:Raycast(hrp.Position, Vector3.new(0, -4.5, 0), raycastParams)
 
     for _, obj in ipairs(workspace:GetDescendants()) do
         if obj:IsA("BasePart") and not obj:IsDescendantOf(character) then
-            local isFloorPart = false
-            if rayResult and rayResult.Instance == obj then
-                isFloorPart = true
-            end
-
-            if isFloorPart then
-                if OriginalPartCollisions[obj] ~= nil then
-                    obj.CanCollide = OriginalPartCollisions[obj]
-                end
+            local nameLower = obj.Name:lower()
+            local isFloor = obj.Position.Y < (character.PrimaryPart and character.PrimaryPart.Position.Y - 2 or 0) and obj.Size.Y < 10
+            local isTruss = obj:IsA("TrussPart") or nameLower:find("truss") or nameLower:find("ladder")
+            
+            if isFloor or isTruss then
+                obj.CanCollide = true
             else
-                if OriginalPartCollisions[obj] == nil then
-                    OriginalPartCollisions[obj] = obj.CanCollide
-                end
                 obj.CanCollide = false
             end
         end
@@ -613,16 +608,6 @@ targetPlayerChan:Toggle("Auto Reset", false, function(state)
     autoResetEnabled = state
 end)
 
-local function getTouchGiverFast(targetPos)
-    local parts = workspace:GetPartBoundsInBox(CFrame.new(targetPos), Vector3.new(20, 20, 20))
-    for _, part in ipairs(parts) do
-        if part.Name == "TouchGiver" and part:IsA("BasePart") then
-            return part
-        end
-    end
-    return nil
-end
-
 local function hasGunInBackpackOrChar()
     local char = LocalPlayer.Character
     local backpack = LocalPlayer:FindFirstChild("Backpack")
@@ -648,12 +633,23 @@ end
 local function fixCharacterState()
     local char = LocalPlayer.Character
     if char then
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+            hrp.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+            for _, child in ipairs(hrp:GetChildren()) do
+                if child:IsA("BodyVelocity") or child:IsA("BodyGyro") or child:IsA("BodyPosition") then
+                    child:Destroy()
+                end
+            end
+        end
         local hum = char:FindFirstChildOfClass("Humanoid")
         if hum then
             hum.PlatformStand = false
             hum:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
             hum:SetStateEnabled(Enum.HumanoidStateType.Climbing, true)
             hum.AutoRotate = true
+            hum:ChangeState(Enum.HumanoidStateType.GettingUp)
         end
         for _, part in ipairs(char:GetDescendants()) do
             if part:IsA("BasePart") then
@@ -671,8 +667,6 @@ local function grabGunAtPosition(targetPos)
 
     local originalCF = hrp.CFrame
     local hum = char:FindFirstChildOfClass("Humanoid")
-    local originalPlatformStand = hum and hum.PlatformStand or false
-    local originalAutoRotate = hum and hum.AutoRotate or true
 
     if hum then
         hum.Sit = false
@@ -688,7 +682,7 @@ local function grabGunAtPosition(targetPos)
         tweenTo:Play()
         tweenTo.Completed:Wait()
 
-        task.wait(0.15)
+        task.wait(0.2)
 
         local tweenBack = TweenService:Create(hrp, tweenInfo, {CFrame = originalCF})
         tweenBack:Play()
@@ -696,6 +690,17 @@ local function grabGunAtPosition(targetPos)
     end)
 
     fixCharacterState()
+
+    weaponCoolingDown = true
+    weaponCoolDownTimer = 3
+
+    task.spawn(function()
+        while weaponCoolDownTimer > 0 do
+            task.wait(1)
+            weaponCoolDownTimer -= 1
+        end
+        weaponCoolingDown = false
+    end)
 end
 
 local function getBestWeapon()
@@ -846,10 +851,10 @@ RunService.Heartbeat:Connect(function()
     hum.PlatformStand = true
     hum.AutoRotate = false
 
-    local safeOffset = HitboxEnabled and 9 or 5
+    local safeOffset = HitboxEnabled and 4 or 2.5
 
     if autoFistEnabled then
-        hrp.CFrame = targetHrp.CFrame * CFrame.new(0, -4, -safeOffset)
+        hrp.CFrame = targetHrp.CFrame * CFrame.new(0, -3.5, 0)
         pcall(function()
             hrp.CFrame = CFrame.new(hrp.Position, hrp.Position + Vector3.new(0, 50, 0))
             if VirtualInputService then
@@ -860,7 +865,7 @@ RunService.Heartbeat:Connect(function()
         end)
     elseif autoKillEnabled then
         local orbitAngle = tick() * 8
-        local orbitRadius = HitboxEnabled and 11 or 7
+        local orbitRadius = HitboxEnabled and 6 or 4
         local offsetX = math.cos(orbitAngle) * orbitRadius
         local offsetZ = math.sin(orbitAngle) * orbitRadius
         hrp.CFrame = CFrame.new(targetHrp.Position + Vector3.new(offsetX, 0, offsetZ), targetHrp.Position)
@@ -921,7 +926,7 @@ RunService.Heartbeat:Connect(function()
             mouse1release()
         end)
     elseif autoArrestEnabled then
-        hrp.CFrame = targetHrp.CFrame * CFrame.new(0, 0, safeOffset)
+        hrp.CFrame = targetHrp.CFrame * CFrame.new(0, -3.5, 0)
 
         local backpack = LocalPlayer:FindFirstChild("Backpack")
         if backpack then
@@ -1149,14 +1154,20 @@ RunService.RenderStepped:Connect(function()
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
     if not hrp then return end
 
-    local seat = hrp.Parent:FindFirstChildOfClass("VehicleSeat") or (char.Sit and char.SeatPart)
-    if not seat and hrp.AssemblyLinearVelocity.Magnitude > 5 then
+    local seat = nil
+    pcall(function()
+        if char.Sit and char:FindFirstChild("SeatPart") then
+            seat = char.SeatPart
+        end
+    end)
 
+    if not seat then
         for _, v in ipairs(workspace:GetDescendants()) do
-            if v:IsA("VehicleSeat") and v.Occupant and v.Occupant.Parent == char then
-                seat = v
-                break
-            end
+            pcall(function()
+                if v:IsA("VehicleSeat") and v.Occupant and v.Occupant.Parent == char then
+                    seat = v
+                end
+            end)
         end
     end
 
@@ -1194,8 +1205,6 @@ local teleportList = {
     ["Neutral Spawn"] = CFrame.new(868, 40, 2342)
 }
 
-local customTeleports = {}
-local selectedDest = nil
 local globalTeleportMethod = "CFrame"
 local isCoolingDown = false
 local coolDownTimer = 0
@@ -1210,53 +1219,8 @@ LocalPlayer.CharacterAdded:Connect(function(char)
     end
 end)
 
-tpChannel:Dropdown("Teleport Method", {"CFrame", "Tween"}, function(selected)
-    globalTeleportMethod = selected
-end)
-
-tpChannel:Seperator()
-
-tpChannel:Button("Clear Teleports", function()
-    for name, _ in pairs(customTeleports) do
-        teleportList[name] = nil
-    end
-    customTeleports = {}
-    pcall(function()
-        dropdown:Clear()
-        for name, _ in pairs(teleportList) do
-            dropdown:Add(name)
-        end
-    end)
-end)
-
-tpChannel:Seperator()
-
-tpChannel:Button("Set Spawn", function()
-    local char = LocalPlayer.Character
-    if char and char:FindFirstChild("HumanoidRootPart") then
-        customSpawnCF = char.HumanoidRootPart.CFrame
-    end
-end)
-
-tpChannel:Seperator()
-
-local keys = {}
-for name in pairs(teleportList) do
-    table.insert(keys, name)
-end
-
-local dropdown = tpChannel:Dropdown("Teleport To:", keys, function(selected)
-    selectedDest = selected
-end)
-
-tpChannel:Seperator()
-
-tpChannel:Button("Teleport Now", function()
-    if not selectedDest then return end
+local function executeTeleport(cf)
     if isCoolingDown then return end
-
-    local cf = teleportList[selectedDest]
-    if not cf then return end
 
     local char = LocalPlayer.Character
     if not char then return end
@@ -1298,11 +1262,33 @@ tpChannel:Button("Teleport Now", function()
         end
         isCoolingDown = false
     end)
+end
+
+tpMethodsChannel:Button("Method: CFrame (Instant)", function()
+    globalTeleportMethod = "CFrame"
+    sendBadgeNotification("faven.lua", "Teleport Method set to CFrame")
 end)
 
-tpChannel:Seperator()
+tpMethodsChannel:Seperator()
 
-tpChannel:Button("Add Custom CFrame", function()
+tpMethodsChannel:Button("Method: Tween (Smooth)", function()
+    globalTeleportMethod = "Tween"
+    sendBadgeNotification("faven.lua", "Teleport Method set to Tween")
+end)
+
+tpMethodsChannel:Seperator()
+
+tpMethodsChannel:Button("Set Spawn Point", function()
+    local char = LocalPlayer.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        customSpawnCF = char.HumanoidRootPart.CFrame
+        sendBadgeNotification("faven.lua", "Custom spawn point saved!")
+    end
+end)
+
+tpMethodsChannel:Seperator()
+
+tpMethodsChannel:Button("Add Custom CFrame Point", function()
     local char = LocalPlayer.Character
     if not char then return end
 
@@ -1311,9 +1297,47 @@ tpChannel:Button("Add Custom CFrame", function()
 
     local name = "Custom_" .. tostring(math.random(1000, 9999))
     teleportList[name] = hrp.CFrame
-    customTeleports[name] = hrp.CFrame
-    dropdown:Add(name)
+    
+    tpChannel:Button(name, function()
+        executeTeleport(teleportList[name])
+    end)
+    tpChannel:Seperator()
+    sendBadgeNotification("faven.lua", "Added custom location: " .. name)
 end)
+
+tpChannel:Button("Town Store", function() executeTeleport(teleportList["Town Store"]) end)
+tpChannel:Seperator()
+tpChannel:Button("Secret Highway Room", function() executeTeleport(teleportList["Secret Highway Room"]) end)
+tpChannel:Seperator()
+tpChannel:Button("Cells", function() executeTeleport(teleportList["Cells"]) end)
+tpChannel:Seperator()
+tpChannel:Button("Guard Room", function() executeTeleport(teleportList["Guard Room"]) end)
+tpChannel:Seperator()
+tpChannel:Button("Waiting Room", function() executeTeleport(teleportList["Waiting Room"]) end)
+tpChannel:Seperator()
+tpChannel:Button("Waiting Room 2", function() executeTeleport(teleportList["Waiting Room 2"]) end)
+tpChannel:Seperator()
+tpChannel:Button("Cafeteria", function() executeTeleport(teleportList["Cafeteria"]) end)
+tpChannel:Seperator()
+tpChannel:Button("Cafeteria Inside", function() executeTeleport(teleportList["Cafeteria Inside"]) end)
+tpChannel:Seperator()
+tpChannel:Button("Yard", function() executeTeleport(teleportList["Yard"]) end)
+tpChannel:Seperator()
+tpChannel:Button("Yard Tower", function() executeTeleport(teleportList["Yard Tower"]) end)
+tpChannel:Seperator()
+tpChannel:Button("Roof", function() executeTeleport(teleportList["Roof"]) end)
+tpChannel:Seperator()
+tpChannel:Button("Crim Base", function() executeTeleport(teleportList["Crim Base"]) end)
+tpChannel:Seperator()
+tpChannel:Button("Secret Room", function() executeTeleport(teleportList["Secret Room"]) end)
+tpChannel:Seperator()
+tpChannel:Button("Sniper Tower", function() executeTeleport(teleportList["Sniper Tower"]) end)
+tpChannel:Seperator()
+tpChannel:Button("Sewer", function() executeTeleport(teleportList["Sewer"]) end)
+tpChannel:Seperator()
+tpChannel:Button("Sewer 2", function() executeTeleport(teleportList["Sewer 2"]) end)
+tpChannel:Seperator()
+tpChannel:Button("Neutral Spawn", function() executeTeleport(teleportList["Neutral Spawn"]) end)
 
 local weaponLocations = {
     ["MP5 Guards"] = Vector3.new(813, 97, 2229),
@@ -1439,21 +1463,29 @@ RunService.Heartbeat:Connect(function()
         hum.AutoRotate = false
     end
 
-
+    -- Grab first weapon
     pcall(function()
         local t1 = TweenService:Create(hrp, TweenInfo.new(0.04, Enum.EasingStyle.Linear), {CFrame = CFrame.new(pos1)})
         t1:Play()
         t1.Completed:Wait()
     end)
 
-
     local startTime = tick()
     while not hasGunInBackpackOrChar() and tick() - startTime < 1.5 do
         task.wait(0.1)
     end
 
-
+    -- Grab second weapon with 2-second cooldown wait (hovering 5 studs under)
     if pos2 then
+        pcall(function()
+            local waitPos = pos2 - Vector3.new(0, 5, 0)
+            local tWait = TweenService:Create(hrp, TweenInfo.new(0.04, Enum.EasingStyle.Linear), {CFrame = CFrame.new(waitPos)})
+            tWait:Play()
+            tWait.Completed:Wait()
+        end)
+
+        task.wait(2)
+
         pcall(function()
             local t2 = TweenService:Create(hrp, TweenInfo.new(0.04, Enum.EasingStyle.Linear), {CFrame = CFrame.new(pos2)})
             t2:Play()
@@ -1462,7 +1494,7 @@ RunService.Heartbeat:Connect(function()
         task.wait(0.2)
     end
 
-
+    -- Return to original position
     pcall(function()
         local tBack = TweenService:Create(hrp, TweenInfo.new(0.04, Enum.EasingStyle.Linear), {CFrame = originalCF})
         tBack:Play()
