@@ -1,5 +1,6 @@
 -- Prison Life
 -- Made by hellamane 3/16/26 7:52 PM
+-- Credits | dawid for UI | Inf Yield for vehicle stuff, Anti Lag, Loopfb |
 
 local DiscordLib = loadstring(game:HttpGet"https://raw.githubusercontent.com/dawid-scripts/UI-Libs/main/discord%20lib.txt")()
 
@@ -424,61 +425,6 @@ end)
 
 playerConfigChan:Seperator()
 
-local InfJumpEnabled = false
-
-playerConfigChan:Toggle("Infinite Jump", false, function(state)
-    InfJumpEnabled = state
-end)
-
-UserInputService.JumpRequest:Connect(function()
-    if InfJumpEnabled then
-        local char = LocalPlayer.Character
-        if not char then return end
-
-        local hum = char:FindFirstChildWhichIsA("Humanoid")
-        if hum then
-            hum:ChangeState(Enum.HumanoidStateType.Jumping)
-        end
-    end
-end)
-
-playerConfigChan:Seperator()
-
-local NoCollideTools = false
-
-playerConfigChan:Toggle("NoCollide Tools", false, function(state)
-    NoCollideTools = state
-end)
-
-local function makeToolNonCollide(tool)
-    for _, obj in ipairs(tool:GetDescendants()) do
-        if obj:IsA("BasePart") then
-            obj.CanCollide = false
-        end
-    end
-end
-
-RunService.Heartbeat:Connect(function()
-    if not NoCollideTools then return end
-
-    local char = LocalPlayer.Character
-    if not char then return end
-
-    for _, tool in ipairs(char:GetChildren()) do
-        if tool:IsA("Tool") then
-            makeToolNonCollide(tool)
-        end
-    end
-
-    for _, tool in ipairs(LocalPlayer.Backpack:GetChildren()) do
-        if tool:IsA("Tool") then
-            makeToolNonCollide(tool)
-        end
-    end
-end)
-
-playerConfigChan:Seperator()
-
 local currentWS = 19
 local currentJP = 35
 
@@ -501,6 +447,46 @@ playerConfigChan:Textbox("Jump Power", "Enter a value between 24 and 110", true,
         return
     end
     currentJP = num
+end)
+
+playerConfigChan:Seperator()
+
+local InfJumpEnabled = false
+
+playerConfigChan:Toggle("Infinite Jump", false, function(state)
+    InfJumpEnabled = state
+end)
+
+UserInputService.JumpRequest:Connect(function()
+    if InfJumpEnabled then
+        local char = LocalPlayer.Character
+        if not char then return end
+
+        local hum = char:FindFirstChildWhichIsA("Humanoid")
+        if hum then
+            hum:ChangeState(Enum.HumanoidStateType.Jumping)
+        end
+    end
+end)
+
+playerConfigChan:Seperator()
+
+local NoclipEnabled = false
+
+playerConfigChan:Toggle("Noclip", false, function(state)
+    NoclipEnabled = state
+end)
+
+RunService.Stepped:Connect(function()
+    if not NoclipEnabled then return end
+    local character = LocalPlayer.Character
+    if character then
+        for _, part in ipairs(character:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = false
+            end
+        end
+    end
 end)
 
 playerConfigChan:Seperator()
@@ -560,6 +546,7 @@ targetPlayerChan:Toggle("Enable Target Features", false, function(state)
             if hum then
                 hum.PlatformStand = false
                 hum:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
+                hum.AutoRotate = true
             end
             for _, part in ipairs(char:GetDescendants()) do
                 if part:IsA("BasePart") then part.CanCollide = true end
@@ -610,6 +597,7 @@ targetPlayerChan:Button("Arrest Player", function()
             hum.Sit = false
             hum:SetStateEnabled(Enum.HumanoidStateType.Seated, false)
             hum.PlatformStand = true
+            hum.AutoRotate = false
         end
 
         for _, part in ipairs(char:GetDescendants()) do
@@ -669,6 +657,7 @@ targetPlayerChan:Button("Arrest Player", function()
         if hum then
             hum.PlatformStand = false
             hum:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
+            hum.AutoRotate = true
         end
         task.delay(0.1, function()
             for _, part in ipairs(char:GetDescendants()) do
@@ -719,11 +708,13 @@ local function grabGunAtPosition(targetPos)
     local originalCF = hrp.CFrame
     local hum = char:FindFirstChildOfClass("Humanoid")
     local originalPlatformStand = hum and hum.PlatformStand or false
+    local originalAutoRotate = hum and hum.AutoRotate or true
 
     if hum then
         hum.Sit = false
         hum:SetStateEnabled(Enum.HumanoidStateType.Seated, false)
         hum.PlatformStand = true
+        hum.AutoRotate = false
     end
 
     for _, part in ipairs(char:GetDescendants()) do
@@ -748,6 +739,7 @@ local function grabGunAtPosition(targetPos)
     if hum then
         hum.PlatformStand = originalPlatformStand
         hum:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
+        hum.AutoRotate = originalAutoRotate
     end
 
     task.delay(0.1, function()
@@ -838,6 +830,7 @@ RunService.Heartbeat:Connect(function()
                 if hum then
                     hum.PlatformStand = false
                     hum:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
+                    hum.AutoRotate = true
                 end
                 for _, part in ipairs(char:GetDescendants()) do
                     if part:IsA("BasePart") then part.CanCollide = true end
@@ -857,6 +850,7 @@ RunService.Heartbeat:Connect(function()
                 if hum then
                     hum.PlatformStand = false
                     hum:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
+                    hum.AutoRotate = true
                 end
                 for _, part in ipairs(char:GetDescendants()) do
                     if part:IsA("BasePart") then part.CanCollide = true end
@@ -876,6 +870,7 @@ RunService.Heartbeat:Connect(function()
                 if hum then
                     hum.PlatformStand = false
                     hum:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
+                    hum.AutoRotate = true
                 end
                 for _, part in ipairs(char:GetDescendants()) do
                     if part:IsA("BasePart") then part.CanCollide = true end
@@ -900,6 +895,7 @@ RunService.Heartbeat:Connect(function()
                 if hum then
                     hum.PlatformStand = false
                     hum:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
+                    hum.AutoRotate = true
                 end
                 for _, part in ipairs(char:GetDescendants()) do
                     if part:IsA("BasePart") then part.CanCollide = true end
@@ -925,6 +921,7 @@ RunService.Heartbeat:Connect(function()
     hum.Sit = false
     hum:SetStateEnabled(Enum.HumanoidStateType.Seated, false)
     hum.PlatformStand = true
+    hum.AutoRotate = false
     for _, part in ipairs(char:GetDescendants()) do
         if part:IsA("BasePart") then
             part.CanCollide = false
@@ -942,14 +939,12 @@ RunService.Heartbeat:Connect(function()
             end
         end)
     elseif autoKillEnabled then
-        -- 360 circle orbit around the target player strictly when active & alive
         local orbitAngle = tick() * 8
         local orbitRadius = 7
         local offsetX = math.cos(orbitAngle) * orbitRadius
         local offsetZ = math.sin(orbitAngle) * orbitRadius
         hrp.CFrame = CFrame.new(targetHrp.Position + Vector3.new(offsetX, 0, offsetZ), targetHrp.Position)
 
-        -- Lock camera onto the target player strictly during active targeting loop
         workspace.CurrentCamera.CFrame = CFrame.new(workspace.CurrentCamera.CFrame.Position, targetHrp.Position)
 
         if not hasGunInBackpackOrChar() then
@@ -1017,6 +1012,7 @@ RunService.Heartbeat:Connect(function()
         end
         hum.PlatformStand = false
         hum:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
+        hum.AutoRotate = true
         for _, part in ipairs(char:GetDescendants()) do
             if part:IsA("BasePart") then
                 part.CanCollide = true
@@ -1245,6 +1241,25 @@ end)
 
 tpChannel:Seperator()
 
+tpChannel:Button("Fix Character State", function()
+    local char = LocalPlayer.Character
+    if char then
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if hum then
+            hum.PlatformStand = false
+            hum:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
+            hum.AutoRotate = true
+        end
+        for _, part in ipairs(char:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = true
+            end
+        end
+    end
+end)
+
+tpChannel:Seperator()
+
 local keys = {}
 for name in pairs(teleportList) do
     table.insert(keys, name)
@@ -1277,10 +1292,12 @@ tpChannel:Button("Teleport Now", function()
 
     local hum = char:FindFirstChildOfClass("Humanoid")
     local originalPlatformStand = hum and hum.PlatformStand or false
+    local originalAutoRotate = hum and hum.AutoRotate or true
     if hum then
         hum.Sit = false
         hum:SetStateEnabled(Enum.HumanoidStateType.Seated, false)
         hum.PlatformStand = true
+        hum.AutoRotate = false
     end
 
     if globalTeleportMethod == "CFrame" then
@@ -1288,6 +1305,7 @@ tpChannel:Button("Teleport Now", function()
         if hum then
             hum.PlatformStand = originalPlatformStand
             hum:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
+            hum.AutoRotate = originalAutoRotate
         end
         for _, part in ipairs(char:GetDescendants()) do
             if part:IsA("BasePart") then part.CanCollide = true end
@@ -1302,6 +1320,7 @@ tpChannel:Button("Teleport Now", function()
         if hum then
             hum.PlatformStand = originalPlatformStand
             hum:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
+            hum.AutoRotate = originalAutoRotate
         end
         task.delay(0.1, function()
             for _, part in ipairs(char:GetDescendants()) do
@@ -1390,11 +1409,13 @@ weaponTeleportsChan:Button("Grab Guns", function()
     local originalCF = hrp.CFrame
     local hum = char:FindFirstChildOfClass("Humanoid")
     local originalPlatformStand = hum and hum.PlatformStand or false
+    local originalAutoRotate = hum and hum.AutoRotate or true
 
     if hum then
         hum.Sit = false
         hum:SetStateEnabled(Enum.HumanoidStateType.Seated, false)
         hum.PlatformStand = true
+        hum.AutoRotate = false
     end
 
     for _, part in ipairs(char:GetDescendants()) do
@@ -1419,6 +1440,7 @@ weaponTeleportsChan:Button("Grab Guns", function()
     if hum then
         hum.PlatformStand = originalPlatformStand
         hum:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
+        hum.AutoRotate = originalAutoRotate
     end
 
     task.delay(0.1, function()
@@ -1448,25 +1470,25 @@ RunService.Heartbeat:Connect(function()
     local team = LocalPlayer.Team and LocalPlayer.Team.Name or ""
     if team == "Guards" then
         if ownsGamePass(643697197) then
-            grabGunAtPosition(Vector3.new(847, 97, 2229)) -- M4A1
+            grabGunAtPosition(Vector3.new(847, 97, 2229))
         else
-            grabGunAtPosition(Vector3.new(813, 97, 2229)) -- MP5
+            grabGunAtPosition(Vector3.new(813, 97, 2229))
         end
-        grabGunAtPosition(Vector3.new(820, 97, 2229)) -- Shotgun
+        grabGunAtPosition(Vector3.new(820, 97, 2229))
     elseif team == "Inmates" then
         if ownsGamePass(643697197) then
-            grabGunAtPosition(Vector3.new(847, 97, 2229)) -- M4A1
+            grabGunAtPosition(Vector3.new(847, 97, 2229))
         else
-            grabGunAtPosition(Vector3.new(813, 97, 2229)) -- MP5
+            grabGunAtPosition(Vector3.new(813, 97, 2229))
         end
-        grabGunAtPosition(Vector3.new(820, 97, 2229)) -- Shotgun
+        grabGunAtPosition(Vector3.new(820, 97, 2229))
     elseif team == "Criminals" then
         if ownsGamePass(1443271) then
-            grabGunAtPosition(Vector3.new(-902, 91, 2047)) -- FAL
+            grabGunAtPosition(Vector3.new(-902, 91, 2047))
         else
-            grabGunAtPosition(Vector3.new(-931, 91, 2039)) -- AK47
+            grabGunAtPosition(Vector3.new(-931, 91, 2039))
         end
-        grabGunAtPosition(Vector3.new(-938, 91, 2039)) -- Shotgun
+        grabGunAtPosition(Vector3.new(-938, 91, 2039))
     end
     task.wait(2)
 end)
@@ -1546,6 +1568,41 @@ weaponModsChan:Button("Instant Reload Mod", function()
     end
 end)
 
+weaponModsChan:Seperator()
+
+local NoCollideTools = false
+
+weaponModsChan:Toggle("NoCollide Tools", false, function(state)
+    NoCollideTools = state
+end)
+
+local function makeToolNonCollide(tool)
+    for _, obj in ipairs(tool:GetDescendants()) do
+        if obj:IsA("BasePart") then
+            obj.CanCollide = false
+        end
+    end
+end
+
+RunService.Heartbeat:Connect(function()
+    if not NoCollideTools then return end
+
+    local char = LocalPlayer.Character
+    if not char then return end
+
+    for _, tool in ipairs(char:GetChildren()) do
+        if tool:IsA("Tool") then
+            makeToolNonCollide(tool)
+        end
+    end
+
+    for _, tool in ipairs(LocalPlayer.Backpack:GetChildren()) do
+        if tool:IsA("Tool") then
+            makeToolNonCollide(tool)
+        end
+    end
+end)
+
 settingsChannel:Toggle(
     "Anti AFK",
     false,
@@ -1615,7 +1672,7 @@ settingsChannel:Button(
             for _, obj in ipairs(workspace:GetDescendants()) do
                 if obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Fire") or obj:IsA("Smoke") then
                     obj.Enabled = false
-                end
+                    end
             end
 
             Lighting.GlobalShadows = false
