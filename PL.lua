@@ -144,17 +144,6 @@ local function disableHitbox()
     Connections = {}
 end
 
-playerConfigChan:Toggle("Hitbox Extender", false, function(state)
-    HitboxEnabled = state
-    if state then
-        enableHitbox()
-    else
-        disableHitbox()
-    end
-end)
-
-playerConfigChan:Seperator()
-
 local aimlockMode = "None"
 local Aiming = false
 local currentTarget = nil
@@ -270,6 +259,17 @@ playerConfigChan:Textbox("Jump Power", "Enter a value between 24 and 100", true,
         return
     end
     currentJP = num
+end)
+
+playerConfigChan:Seperator()
+
+playerConfigChan:Toggle("Hitbox Extender", false, function(state)
+    HitboxEnabled = state
+    if state then
+        enableHitbox()
+    else
+        disableHitbox()
+    end
 end)
 
 playerConfigChan:Seperator()
@@ -472,18 +472,49 @@ end)
 playerConfigChan:Seperator()
 
 local NoclipEnabled = false
+local OriginalPartCollisions = {}
 
 playerConfigChan:Toggle("Noclip", false, function(state)
     NoclipEnabled = state
+    if not state then
+        for part, canCollide in pairs(OriginalPartCollisions) do
+            if part and part.Parent then
+                part.CanCollide = canCollide
+            end
+        end
+        OriginalPartCollisions = {}
+    end
 end)
 
 RunService.Stepped:Connect(function()
     if not NoclipEnabled then return end
     local character = LocalPlayer.Character
-    if character then
-        for _, part in ipairs(character:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = false
+    if not character then return end
+    local hrp = character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+
+    local raycastParams = RaycastParams.new()
+    raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+    raycastParams.FilterDescendantsInstances = {character}
+
+    local rayResult = workspace:Raycast(hrp.Position, Vector3.new(0, -4.5, 0), raycastParams)
+
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if obj:IsA("BasePart") and not obj:IsDescendantOf(character) then
+            local isFloorPart = false
+            if rayResult and rayResult.Instance == obj then
+                isFloorPart = true
+            end
+
+            if isFloorPart then
+                if OriginalPartCollisions[obj] ~= nil then
+                    obj.CanCollide = OriginalPartCollisions[obj]
+                end
+            else
+                if OriginalPartCollisions[obj] == nil then
+                    OriginalPartCollisions[obj] = obj.CanCollide
+                end
+                obj.CanCollide = false
             end
         end
     end
@@ -506,9 +537,10 @@ local selectedTargetPlayer = nil
 local playerConfigEnabled = false
 local autoFistEnabled = false
 local autoKillEnabled = false
+local autoArrestEnabled = false
 local autoResetEnabled = false
 local originalPositionBeforeTarget = nil
-local isExecutingTargetAction = false
+local isExecutingTargetAction = nil
 
 local playerNames = {}
 for _, p in ipairs(Players:GetPlayers()) do
@@ -546,6 +578,7 @@ targetPlayerChan:Toggle("Enable Target Features", false, function(state)
             if hum then
                 hum.PlatformStand = false
                 hum:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
+                hum:SetStateEnabled(Enum.HumanoidStateType.Climbing, true)
                 hum.AutoRotate = true
             end
             for _, part in ipairs(char:GetDescendants()) do
@@ -570,101 +603,14 @@ end)
 
 targetPlayerChan:Seperator()
 
-targetPlayerChan:Toggle("Auto Reset", false, function(state)
-    autoResetEnabled = state
+targetPlayerChan:Toggle("Auto Arrest", false, function(state)
+    autoArrestEnabled = state
 end)
 
 targetPlayerChan:Seperator()
 
-targetPlayerChan:Button("Arrest Player", function()
-    if not selectedTargetPlayer or not selectedTargetPlayer.Character then
-        sendBadgeNotification("faven.lua", "Error: No valid target player selected!")
-        return
-    end
-
-    task.spawn(function()
-        local targetPlr = selectedTargetPlayer
-        local char = LocalPlayer.Character
-        if not char then return end
-        local hrp = char:FindFirstChild("HumanoidRootPart")
-        if not hrp then return end
-
-        local originalPos = hrp.CFrame
-        sendBadgeNotification("faven.lua", "Attempting to arrest " .. targetPlr.Name .. "...")
-
-        local hum = char:FindFirstChildOfClass("Humanoid")
-        if hum then
-            hum.Sit = false
-            hum:SetStateEnabled(Enum.HumanoidStateType.Seated, false)
-            hum.PlatformStand = true
-            hum.AutoRotate = false
-        end
-
-        for _, part in ipairs(char:GetDescendants()) do
-            if part:IsA("BasePart") then part.CanCollide = false end
-        end
-
-        local backpack = LocalPlayer:FindFirstChild("Backpack")
-        if backpack then
-            for _, item in ipairs(backpack:GetChildren()) do
-                if item:IsA("Tool") and (item.Name:lower():find("arrest") or item.Name:lower():find("handcuff")) then
-                    item.Parent = char
-                end
-            end
-        end
-
-        local initialTeam = targetPlr.Team and targetPlr.Team.Name or ""
-        local startTime = tick()
-        local success = false
-
-        while targetPlr and targetPlr.Parent and targetPlr.Character and tick() - startTime < 12 do
-            local targetChar = targetPlr.Character
-            local targetTorso = targetChar:FindFirstChild("Torso") or targetChar:FindFirstChild("UpperTorso") or targetChar:FindFirstChild("HumanoidRootPart")
-            local targetHum = targetChar:FindFirstChildOfClass("Humanoid")
-            
-            if not targetHum or targetHum.Health <= 0 then break end
-            if targetTorso and hrp then
-                hrp.CFrame = targetTorso.CFrame * CFrame.new(0, 0, 2)
-            end
-
-            pcall(function()
-                for _, tool in ipairs(char:GetChildren()) do
-                    if tool:IsA("Tool") and (tool.Name:lower():find("arrest") or tool.Name:lower():find("handcuff")) then
-                        local handle = tool:FindFirstChild("Handle")
-                        if handle and firetouchinterest then
-                            firetouchinterest(handle, targetTorso, 0)
-                            firetouchinterest(handle, targetTorso, 1)
-                        end
-                    end
-                end
-            end)
-
-            local currentTeam = targetPlr.Team and targetPlr.Team.Name or ""
-            if currentTeam ~= initialTeam then
-                success = true
-                sendBadgeNotification("faven.lua", targetPlr.Name .. " was successfully arrested and team changed to " .. currentTeam .. "!")
-                break
-            end
-
-            task.wait(0.2)
-        end
-
-        if not success then
-            sendBadgeNotification("faven.lua", "Arrest Error: Failed to arrest target or team did not change!")
-        end
-
-        hrp.CFrame = originalPos
-        if hum then
-            hum.PlatformStand = false
-            hum:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
-            hum.AutoRotate = true
-        end
-        task.delay(0.1, function()
-            for _, part in ipairs(char:GetDescendants()) do
-                if part:IsA("BasePart") then part.CanCollide = true end
-            end
-        end)
-    end)
+targetPlayerChan:Toggle("Auto Reset", false, function(state)
+    autoResetEnabled = state
 end)
 
 local function getTouchGiverFast(targetPos)
@@ -699,6 +645,24 @@ local function hasGunInBackpackOrChar()
     return weaponsFound
 end
 
+local function fixCharacterState()
+    local char = LocalPlayer.Character
+    if char then
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if hum then
+            hum.PlatformStand = false
+            hum:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
+            hum:SetStateEnabled(Enum.HumanoidStateType.Climbing, true)
+            hum.AutoRotate = true
+        end
+        for _, part in ipairs(char:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = true
+            end
+        end
+    end
+end
+
 local function grabGunAtPosition(targetPos)
     local char = LocalPlayer.Character
     if not char then return end
@@ -713,14 +677,9 @@ local function grabGunAtPosition(targetPos)
     if hum then
         hum.Sit = false
         hum:SetStateEnabled(Enum.HumanoidStateType.Seated, false)
+        hum:SetStateEnabled(Enum.HumanoidStateType.Climbing, false)
         hum.PlatformStand = true
         hum.AutoRotate = false
-    end
-
-    for _, part in ipairs(char:GetDescendants()) do
-        if part:IsA("BasePart") then
-            part.CanCollide = false
-        end
     end
 
     pcall(function()
@@ -736,19 +695,7 @@ local function grabGunAtPosition(targetPos)
         tweenBack.Completed:Wait()
     end)
 
-    if hum then
-        hum.PlatformStand = originalPlatformStand
-        hum:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
-        hum.AutoRotate = originalAutoRotate
-    end
-
-    task.delay(0.1, function()
-        for _, part in ipairs(char:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = true
-            end
-        end
-    end)
+    fixCharacterState()
 end
 
 local function getBestWeapon()
@@ -826,15 +773,7 @@ RunService.Heartbeat:Connect(function()
             local char = LocalPlayer.Character
             if char and char:FindFirstChild("HumanoidRootPart") then
                 char.HumanoidRootPart.CFrame = originalPositionBeforeTarget
-                local hum = char:FindFirstChildOfClass("Humanoid")
-                if hum then
-                    hum.PlatformStand = false
-                    hum:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
-                    hum.AutoRotate = true
-                end
-                for _, part in ipairs(char:GetDescendants()) do
-                    if part:IsA("BasePart") then part.CanCollide = true end
-                end
+                fixCharacterState()
             end
             isExecutingTargetAction = false
         end
@@ -846,15 +785,7 @@ RunService.Heartbeat:Connect(function()
             local char = LocalPlayer.Character
             if char and char:FindFirstChild("HumanoidRootPart") then
                 char.HumanoidRootPart.CFrame = originalPositionBeforeTarget
-                local hum = char:FindFirstChildOfClass("Humanoid")
-                if hum then
-                    hum.PlatformStand = false
-                    hum:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
-                    hum.AutoRotate = true
-                end
-                for _, part in ipairs(char:GetDescendants()) do
-                    if part:IsA("BasePart") then part.CanCollide = true end
-                end
+                fixCharacterState()
             end
             isExecutingTargetAction = false
         end
@@ -866,15 +797,7 @@ RunService.Heartbeat:Connect(function()
             local char = LocalPlayer.Character
             if char and char:FindFirstChild("HumanoidRootPart") then
                 char.HumanoidRootPart.CFrame = originalPositionBeforeTarget
-                local hum = char:FindFirstChildOfClass("Humanoid")
-                if hum then
-                    hum.PlatformStand = false
-                    hum:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
-                    hum.AutoRotate = true
-                end
-                for _, part in ipairs(char:GetDescendants()) do
-                    if part:IsA("BasePart") then part.CanCollide = true end
-                end
+                fixCharacterState()
             end
             isExecutingTargetAction = false
         end
@@ -887,19 +810,18 @@ RunService.Heartbeat:Connect(function()
     local targetTorso = targetChar and (targetChar:FindFirstChild("Torso") or targetChar:FindFirstChild("UpperTorso") or targetHrp)
 
     if not targetHum or not targetHrp or not targetTorso or targetHum.Health <= 0 then 
+        if autoResetEnabled then
+            local char = LocalPlayer.Character
+            local hum = char and char:FindFirstChildOfClass("Humanoid")
+            if hum and hum.Health > 0 then
+                hum.Health = 0
+            end
+        end
         if isExecutingTargetAction and originalPositionBeforeTarget then
             local char = LocalPlayer.Character
             if char and char:FindFirstChild("HumanoidRootPart") then
                 char.HumanoidRootPart.CFrame = originalPositionBeforeTarget
-                local hum = char:FindFirstChildOfClass("Humanoid")
-                if hum then
-                    hum.PlatformStand = false
-                    hum:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
-                    hum.AutoRotate = true
-                end
-                for _, part in ipairs(char:GetDescendants()) do
-                    if part:IsA("BasePart") then part.CanCollide = true end
-                end
+                fixCharacterState()
             end
             isExecutingTargetAction = false
         end
@@ -920,16 +842,14 @@ RunService.Heartbeat:Connect(function()
 
     hum.Sit = false
     hum:SetStateEnabled(Enum.HumanoidStateType.Seated, false)
+    hum:SetStateEnabled(Enum.HumanoidStateType.Climbing, false)
     hum.PlatformStand = true
     hum.AutoRotate = false
-    for _, part in ipairs(char:GetDescendants()) do
-        if part:IsA("BasePart") then
-            part.CanCollide = false
-        end
-    end
+
+    local safeOffset = HitboxEnabled and 9 or 5
 
     if autoFistEnabled then
-        hrp.CFrame = targetHrp.CFrame * CFrame.new(0, -4, 0)
+        hrp.CFrame = targetHrp.CFrame * CFrame.new(0, -4, -safeOffset)
         pcall(function()
             hrp.CFrame = CFrame.new(hrp.Position, hrp.Position + Vector3.new(0, 50, 0))
             if VirtualInputService then
@@ -940,7 +860,7 @@ RunService.Heartbeat:Connect(function()
         end)
     elseif autoKillEnabled then
         local orbitAngle = tick() * 8
-        local orbitRadius = 7
+        local orbitRadius = HitboxEnabled and 11 or 7
         local offsetX = math.cos(orbitAngle) * orbitRadius
         local offsetZ = math.sin(orbitAngle) * orbitRadius
         hrp.CFrame = CFrame.new(targetHrp.Position + Vector3.new(offsetX, 0, offsetZ), targetHrp.Position)
@@ -1000,6 +920,29 @@ RunService.Heartbeat:Connect(function()
             task.wait(0.05)
             mouse1release()
         end)
+    elseif autoArrestEnabled then
+        hrp.CFrame = targetHrp.CFrame * CFrame.new(0, 0, safeOffset)
+
+        local backpack = LocalPlayer:FindFirstChild("Backpack")
+        if backpack then
+            for _, item in ipairs(backpack:GetChildren()) do
+                if item:IsA("Tool") and (item.Name:lower():find("arrest") or item.Name:lower():find("handcuff")) then
+                    item.Parent = char
+                end
+            end
+        end
+
+        pcall(function()
+            for _, tool in ipairs(char:GetChildren()) do
+                if tool:IsA("Tool") and (tool.Name:lower():find("arrest") or tool.Name:lower():find("handcuff")) then
+                    local handle = tool:FindFirstChild("Handle")
+                    if handle and firetouchinterest then
+                        firetouchinterest(handle, targetTorso, 0)
+                        firetouchinterest(handle, targetTorso, 1)
+                    end
+                end
+            end
+        end)
     end
 
     if targetHum.Health <= 0 then
@@ -1010,14 +953,7 @@ RunService.Heartbeat:Connect(function()
                 hrp.CFrame = originalPositionBeforeTarget
             end
         end
-        hum.PlatformStand = false
-        hum:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
-        hum.AutoRotate = true
-        for _, part in ipairs(char:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = true
-            end
-        end
+        fixCharacterState()
         isExecutingTargetAction = false
     end
 end)
@@ -1175,6 +1111,69 @@ vehicleChannel:Slider("Vehicle Speed", 1, 18, 1, function(value)
     vehicleflyspeed = value
 end)
 
+vehicleChannel:Seperator()
+
+local vehicleFloatEnabled = false
+local floatPlatform = nil
+local floatHeightOffset = 0
+
+vehicleChannel:Toggle("Vehicle Float", false, function(state)
+    vehicleFloatEnabled = state
+    if not state and floatPlatform then
+        floatPlatform:Destroy()
+        floatPlatform = nil
+    end
+end)
+
+UserInputService.InputBegan:Connect(function(input, processed)
+    if processed then return end
+    if vehicleFloatEnabled then
+        if input.KeyCode == Enum.KeyCode.Q then
+            floatHeightOffset += 3
+        elseif input.KeyCode == Enum.KeyCode.E then
+            floatHeightOffset -= 3
+        end
+    end
+end)
+
+RunService.RenderStepped:Connect(function()
+    if not vehicleFloatEnabled then
+        if floatPlatform then
+            floatPlatform:Destroy()
+            floatPlatform = nil
+        end
+        return
+    end
+
+    local char = LocalPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+
+    local seat = hrp.Parent:FindFirstChildOfClass("VehicleSeat") or (char.Sit and char.SeatPart)
+    if not seat and hrp.AssemblyLinearVelocity.Magnitude > 5 then
+
+        for _, v in ipairs(workspace:GetDescendants()) do
+            if v:IsA("VehicleSeat") and v.Occupant and v.Occupant.Parent == char then
+                seat = v
+                break
+            end
+        end
+    end
+
+    local targetPart = seat or hrp
+
+    if not floatPlatform or not floatPlatform.Parent then
+        floatPlatform = Instance.new("Part")
+        floatPlatform.Size = Vector3.new(12, 1, 12)
+        floatPlatform.Transparency = 1
+        floatPlatform.Anchored = true
+        floatPlatform.CanCollide = true
+        floatPlatform.Parent = workspace
+    end
+
+    floatPlatform.CFrame = CFrame.new(targetPart.Position + Vector3.new(0, -3.5 + floatHeightOffset, 0))
+end)
+
 local teleportList = {
     ["Town Store"] = CFrame.new(438, 12, 1167),
     ["Secret Highway Room"] = CFrame.new(-36, 11, 1290),
@@ -1241,25 +1240,6 @@ end)
 
 tpChannel:Seperator()
 
-tpChannel:Button("Fix Character State", function()
-    local char = LocalPlayer.Character
-    if char then
-        local hum = char:FindFirstChildOfClass("Humanoid")
-        if hum then
-            hum.PlatformStand = false
-            hum:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
-            hum.AutoRotate = true
-        end
-        for _, part in ipairs(char:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = true
-            end
-        end
-    end
-end)
-
-tpChannel:Seperator()
-
 local keys = {}
 for name in pairs(teleportList) do
     table.insert(keys, name)
@@ -1284,32 +1264,20 @@ tpChannel:Button("Teleport Now", function()
     local hrp = char:FindFirstChild("HumanoidRootPart")
     if not hrp then return end
 
-    for _, part in ipairs(char:GetDescendants()) do
-        if part:IsA("BasePart") then
-            part.CanCollide = false
-        end
-    end
-
     local hum = char:FindFirstChildOfClass("Humanoid")
     local originalPlatformStand = hum and hum.PlatformStand or false
     local originalAutoRotate = hum and hum.AutoRotate or true
     if hum then
         hum.Sit = false
         hum:SetStateEnabled(Enum.HumanoidStateType.Seated, false)
+        hum:SetStateEnabled(Enum.HumanoidStateType.Climbing, false)
         hum.PlatformStand = true
         hum.AutoRotate = false
     end
 
     if globalTeleportMethod == "CFrame" then
         hrp.CFrame = cf + Vector3.new(0, 3, 0)
-        if hum then
-            hum.PlatformStand = originalPlatformStand
-            hum:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
-            hum.AutoRotate = originalAutoRotate
-        end
-        for _, part in ipairs(char:GetDescendants()) do
-            if part:IsA("BasePart") then part.CanCollide = true end
-        end
+        fixCharacterState()
     elseif globalTeleportMethod == "Tween" then
         pcall(function()
             local tweenInfo = TweenInfo.new(0.05, Enum.EasingStyle.Linear)
@@ -1317,16 +1285,7 @@ tpChannel:Button("Teleport Now", function()
             tweenTo:Play()
             tweenTo.Completed:Wait()
         end)
-        if hum then
-            hum.PlatformStand = originalPlatformStand
-            hum:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
-            hum.AutoRotate = originalAutoRotate
-        end
-        task.delay(0.1, function()
-            for _, part in ipairs(char:GetDescendants()) do
-                if part:IsA("BasePart") then part.CanCollide = true end
-            end
-        end)
+        fixCharacterState()
     end
 
     isCoolingDown = true
@@ -1408,20 +1367,13 @@ weaponTeleportsChan:Button("Grab Guns", function()
 
     local originalCF = hrp.CFrame
     local hum = char:FindFirstChildOfClass("Humanoid")
-    local originalPlatformStand = hum and hum.PlatformStand or false
-    local originalAutoRotate = hum and hum.AutoRotate or true
 
     if hum then
         hum.Sit = false
         hum:SetStateEnabled(Enum.HumanoidStateType.Seated, false)
+        hum:SetStateEnabled(Enum.HumanoidStateType.Climbing, false)
         hum.PlatformStand = true
         hum.AutoRotate = false
-    end
-
-    for _, part in ipairs(char:GetDescendants()) do
-        if part:IsA("BasePart") then
-            part.CanCollide = false
-        end
     end
 
     pcall(function()
@@ -1430,26 +1382,14 @@ weaponTeleportsChan:Button("Grab Guns", function()
         tweenTo:Play()
         tweenTo.Completed:Wait()
 
-        task.wait(0.15)
+        task.wait(0.2)
 
         local tweenBack = TweenService:Create(hrp, tweenInfo, {CFrame = originalCF})
         tweenBack:Play()
         tweenBack.Completed:Wait()
     end)
 
-    if hum then
-        hum.PlatformStand = originalPlatformStand
-        hum:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
-        hum.AutoRotate = originalAutoRotate
-    end
-
-    task.delay(0.1, function()
-        for _, part in ipairs(char:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = true
-            end
-        end
-    end)
+    fixCharacterState()
 
     weaponCoolingDown = true
     weaponCoolDownTimer = 3
@@ -1467,29 +1407,69 @@ RunService.Heartbeat:Connect(function()
     if not autoGrabWeaponsEnabled then return end
     if hasGunInBackpackOrChar() then return end
 
+    local char = LocalPlayer.Character
+    if not char then return end
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+
+    local originalCF = hrp.CFrame
+    local hum = char:FindFirstChildOfClass("Humanoid")
+
+    local pos1, pos2 = nil, nil
     local team = LocalPlayer.Team and LocalPlayer.Team.Name or ""
+
     if team == "Guards" then
-        if ownsGamePass(643697197) then
-            grabGunAtPosition(Vector3.new(847, 97, 2229))
-        else
-            grabGunAtPosition(Vector3.new(813, 97, 2229))
-        end
-        grabGunAtPosition(Vector3.new(820, 97, 2229))
+        pos1 = ownsGamePass(643697197) and Vector3.new(847, 97, 2229) or Vector3.new(813, 97, 2229)
+        pos2 = Vector3.new(820, 97, 2229)
     elseif team == "Inmates" then
-        if ownsGamePass(643697197) then
-            grabGunAtPosition(Vector3.new(847, 97, 2229))
-        else
-            grabGunAtPosition(Vector3.new(813, 97, 2229))
-        end
-        grabGunAtPosition(Vector3.new(820, 97, 2229))
+        pos1 = ownsGamePass(643697197) and Vector3.new(847, 97, 2229) or Vector3.new(813, 97, 2229)
+        pos2 = Vector3.new(820, 97, 2229)
     elseif team == "Criminals" then
-        if ownsGamePass(1443271) then
-            grabGunAtPosition(Vector3.new(-902, 91, 2047))
-        else
-            grabGunAtPosition(Vector3.new(-931, 91, 2039))
-        end
-        grabGunAtPosition(Vector3.new(-938, 91, 2039))
+        pos1 = ownsGamePass(1443271) and Vector3.new(-902, 91, 2047) or Vector3.new(-931, 91, 2039)
+        pos2 = Vector3.new(-938, 91, 2039)
+    else
+        return
     end
+
+    if hum then
+        hum.Sit = false
+        hum:SetStateEnabled(Enum.HumanoidStateType.Seated, false)
+        hum:SetStateEnabled(Enum.HumanoidStateType.Climbing, false)
+        hum.PlatformStand = true
+        hum.AutoRotate = false
+    end
+
+
+    pcall(function()
+        local t1 = TweenService:Create(hrp, TweenInfo.new(0.04, Enum.EasingStyle.Linear), {CFrame = CFrame.new(pos1)})
+        t1:Play()
+        t1.Completed:Wait()
+    end)
+
+
+    local startTime = tick()
+    while not hasGunInBackpackOrChar() and tick() - startTime < 1.5 do
+        task.wait(0.1)
+    end
+
+
+    if pos2 then
+        pcall(function()
+            local t2 = TweenService:Create(hrp, TweenInfo.new(0.04, Enum.EasingStyle.Linear), {CFrame = CFrame.new(pos2)})
+            t2:Play()
+            t2.Completed:Wait()
+        end)
+        task.wait(0.2)
+    end
+
+
+    pcall(function()
+        local tBack = TweenService:Create(hrp, TweenInfo.new(0.04, Enum.EasingStyle.Linear), {CFrame = originalCF})
+        tBack:Play()
+        tBack.Completed:Wait()
+    end)
+
+    fixCharacterState()
     task.wait(2)
 end)
 
