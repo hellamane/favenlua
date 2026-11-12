@@ -1551,18 +1551,25 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
-weaponModsChan:Button("Instant Reload Mod", function()
+weaponModsChan:Button("Instant Reload", function()
     local char = LocalPlayer.Character
     if not char then return end
+    
     for _, tool in ipairs(char:GetChildren()) do
         if tool:IsA("Tool") then
+
             for _, v in ipairs(tool:GetDescendants()) do
-                if v:IsA("NumberValue") or v:IsA("IntValue") then
+                if v:IsA("IntValue") or v:IsA("NumberValue") then
                     local vName = v.Name:lower()
-                    if vName:find("reload") or vName:find("cooldown") then
-                        v.Value = 0
+                    if vName:find("ammo") or vName:find("clip") then
+                        v.Value = 999
                     end
                 end
+            end
+            
+            local reloadEvent = tool:FindFirstChild("ReloadEvent") or tool:FindFirstChild("Reload")
+            if reloadEvent and reloadEvent:IsA("RemoteEvent") then
+                reloadEvent:FireServer()
             end
         end
     end
@@ -1628,25 +1635,27 @@ settingsChannel:Toggle(
 
 settingsChannel:Seperator()
 
+local fullbrightLoop = nil
+
 settingsChannel:Toggle(
-    "Loop DayTime",
+    "Loop Day",
     false,
     function(bool)
         if bool then
-            _G.DayLoop = true
-            task.spawn(function()
-                while _G.DayLoop do
-                    pcall(function()
-                        local Lighting = game:GetService("Lighting")
-                        Lighting.ClockTime = 14
-                        Lighting.Brightness = 2
-                        Lighting.GlobalShadows = false
-                    end)
-                    task.wait(5)
-                end
+            if fullbrightLoop then fullbrightLoop:Disconnect() end
+            fullbrightLoop = RunService.RenderStepped:Connect(function()
+                local Lighting = game:GetService("Lighting")
+                Lighting.Brightness = 2
+                Lighting.ClockTime = 14
+                Lighting.FogEnd = 100000
+                Lighting.GlobalShadows = false
+                Lighting.OutdoorAmbient = Color3.fromRGB(128, 128, 128)
             end)
         else
-            _G.DayLoop = false
+            if fullbrightLoop then
+                fullbrightLoop:Disconnect()
+                fullbrightLoop = nil
+            end
         end
     end
 )
