@@ -248,6 +248,32 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
+local currentWS = 24
+local currentJP = 35
+
+local wsMin, wsMax = 16, 33
+local jpMin, jpMax = 24, 100
+
+playerConfigChan:Textbox("Walk Speed", "Enter a value between 16 and 33", true, function(text)
+    local num = tonumber(text)
+    if not num or num < wsMin or num > wsMax then
+        return
+    end
+    currentWS = num
+end)
+
+playerConfigChan:Seperator()
+
+playerConfigChan:Textbox("Jump Power", "Enter a value between 24 and 100", true, function(text)
+    local num = tonumber(text)
+    if not num or num < jpMin or num > jpMax then
+        return
+    end
+    currentJP = num
+end)
+
+playerConfigChan:Seperator()
+
 local ESPEnabled = false
 local espData = {}
 local espPlayerAddedConn
@@ -421,32 +447,6 @@ playerConfigChan:Toggle("ESP", false, function(state)
     else 
         disableESP() 
     end
-end)
-
-playerConfigChan:Seperator()
-
-local currentWS = 19
-local currentJP = 35
-
-local wsMin, wsMax = 16, 33
-local jpMin, jpMax = 24, 110
-
-playerConfigChan:Textbox("Walk Speed", "Enter a value between 16 and 33", true, function(text)
-    local num = tonumber(text)
-    if not num or num < wsMin or num > wsMax then
-        return
-    end
-    currentWS = num
-end)
-
-playerConfigChan:Seperator()
-
-playerConfigChan:Textbox("Jump Power", "Enter a value between 24 and 110", true, function(text)
-    local num = tonumber(text)
-    if not num or num < jpMin or num > jpMax then
-        return
-    end
-    currentJP = num
 end)
 
 playerConfigChan:Seperator()
